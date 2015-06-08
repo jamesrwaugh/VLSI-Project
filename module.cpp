@@ -65,7 +65,7 @@ std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& ce
     std::ifstream stream(fileName);
     std::string line;
     module tmpModel;
-    int lineCoint = 1;    //Which line we are on
+    int lineCount = 1;    //Which line we are on
     
     if(!stream.is_open()) {
         error("Could not open netlibf module file \"", fileName, "\"");
@@ -74,7 +74,7 @@ std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& ce
     int linesRead;
     while(getline_fixed(stream, line, linesRead))
     {
-        lineCoint += linesRead;
+        lineCount += linesRead;
     
         if(line.find(".model") != std::string::npos)
         {
@@ -129,8 +129,9 @@ std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& ce
                     tmpCell.inputs.push_back(connectName.second);
                 }
                 else {
-                    error(fileName, ":", lineCoint, ": ", "Pin connection \"", connectName.first, 
-                        "\" did not match any pin on cell \"", tmpCell.name, "\""); 
+                    error(fileName, ":", lineCount, ": ", "Pin connection \"", connectName.first, 
+                        "\" did not match any pin on cell \"", tmpCell.name, "\" ", 
+                        cell.inputs, cell.outputs); 
                 }
             }
 

@@ -37,11 +37,12 @@ public:
 private:
     //Output operator
     friend std::ostream& operator<<(std::ostream& os, const MattCellFile& mc);
-
-    //Stores standard cell information
-    std::map<std::string, stdcell> cells;
     
-    //Store the cell file's name
+    //Parses a stdcell from a line
+    void readCell(std::istream& is, stdcell& d, int lineNumber);
+
+    //Data members
+    std::map<std::string, stdcell> cells;
     std::string cellfilename;
 };
 

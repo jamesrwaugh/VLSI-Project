@@ -10,9 +10,10 @@ int main(int argc, char** argv)
         std::cout << "Usage: " << argv[0] << " <stdcell file> <module file>" << std::endl;
         return 1;
     }
-    
-    //Loads all files
-    try {
+
+    try 
+    {
+        //Loads all files
         MattCellFile cells(argv[1]);
         std::vector<module> modules = readModuleFile(argv[2], cells);    
         
