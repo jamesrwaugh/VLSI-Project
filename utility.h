@@ -2,6 +2,8 @@
 #define UTILITY_H
 #include <vector>
 #include <string>
+#include <stdexcept>
+#include <sstream>
 #include <iostream>
 
 /* Improved Split funtion that skips over consecutive delimiters, 
@@ -15,8 +17,9 @@ void trim(std::string& s);
 void removeComments(std::string& s);
 
 /* A drop-in replacement for std::getline that combines multiple lines ending in "\"
- * together into a single line, removes comments, and removes whitespace */
-std::istream& getline_fixed(std::istream& is, std::string& line);
+ * together into a single line, removes comments, and removes whitespace. Returns number
+ * of lines read into `lineCount` */
+std::istream& getline_fixed(std::istream& is, std::string& line, int& lineCount);
 
 //roger - use this for printing a string on a single line
 template <typename printType>
@@ -52,6 +55,17 @@ std::ostream& operator<<(std::ostream& os, const T& cntr)
 	os << ']';
 
 	return os;
+}
+
+//Used for format a string into a runetime_error.
+//See http://en.cppreference.com/w/cpp/language/parameter_pack
+template<typename... Ts>
+void error(Ts... args)
+{
+    std::stringstream ss;
+    int dummy[sizeof...(Ts)] = { (ss << args, 0)... };
+    (void)dummy;
+    throw std::runtime_error(ss.str());
 }
 
 #endif

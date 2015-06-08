@@ -40,6 +40,9 @@ private:
 
     //Stores standard cell information
     std::map<std::string, stdcell> cells;
+    
+    //Store the cell file's name
+    std::string cellfilename;
 };
 
 

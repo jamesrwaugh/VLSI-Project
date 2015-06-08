@@ -7,13 +7,13 @@
 
 struct module
 {
-	//Ordered list of gates as definitions only
-	std::vector<stdcell> gates;
-	
-	//Connectivity matrix of the module gates
-	std::vector<std::vector<int>> connections;
+    //Ordered list of gates as definitions only
+    std::vector<stdcell> gates;
     
-	//Module name
+    //Connectivity matrix of the module gates
+    std::vector<std::vector<int>> connections;
+    
+    //Module name
     std::string name;
 };
 

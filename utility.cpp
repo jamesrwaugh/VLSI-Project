@@ -2,17 +2,17 @@
 
 std::vector<std::string> Split(const std::string& target, const std::string& delims)
 {
-	std::vector<std::string> result;
-	size_t startPos = 0, it = 0;
-	
-	do {
-		it = target.find_first_of(delims, startPos);
-		result.push_back(target.substr(startPos, it - startPos));
-		startPos = target.find_first_not_of(delims, it+1);
-	}
-	while(it != std::string::npos);
-	
-	return result;
+    std::vector<std::string> result;
+    size_t startPos = 0, it = 0;
+    
+    do {
+        it = target.find_first_of(delims, startPos);
+        result.push_back(target.substr(startPos, it - startPos));
+        startPos = target.find_first_not_of(delims, it+1);
+    }
+    while(it != std::string::npos);
+    
+    return result;
 }
 
 void trim(std::string& s)
@@ -28,10 +28,11 @@ void removeComments(std::string& s)
         s.erase(comment, std::string::npos);
 }
 
-std::istream& getline_fixed_recursive(std::istream& is, std::string& line, bool append)
+std::istream& getline_fixed_recursive(std::istream& is, std::string& line, bool append, int& lineCount)
 {
     std::string s;
     if(std::getline(is, s)) {
+        lineCount += 1;
         removeComments(s);
         trim(s);
         std::string sa = s.substr(0, s.find('\\'));
@@ -41,13 +42,14 @@ std::istream& getline_fixed_recursive(std::istream& is, std::string& line, bool 
             line = sa;
         }
         if(s.back() == '\\') {
-            getline_fixed_recursive(is, line, true);
+            getline_fixed_recursive(is, line, true, lineCount);
         }
     }
     return is;
 }
 
-std::istream& getline_fixed(std::istream& is, std::string& line)
+std::istream& getline_fixed(std::istream& is, std::string& line, int& lineCount)
 {
-    return getline_fixed_recursive(is, line, false);
+    lineCount = 0;
+    return getline_fixed_recursive(is, line, false, lineCount);
 }

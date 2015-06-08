@@ -5,17 +5,26 @@
 
 int main(int argc, char** argv)
 {
-    MattCellFile cells("usf_ami05_std_cells.lib");
-    std::cout << cells << std::endl;
+    //If not enough arguments print usage
+    if(argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <stdcell file> <module file>" << std::endl;
+        return 1;
+    }
     
-    std::vector<module> models = readModuleFile(argv[1], cells);
-
-    //Outputs connectivity matricies
-    for(module& m : models) {
-        for(std::vector<int>& row : m.connections) {
-            std::cout << row << std::endl;
-        }
-        std::cout << std::endl;
+    //Loads all files
+    try {
+        MattCellFile cells(argv[1]);
+        std::vector<module> modules = readModuleFile(argv[2], cells);    
+        
+        //Outputs connectivity matricies
+        for(module& m : modules) {
+            for(std::vector<int>& row : m.connections)
+                std::cout << row << std::endl;
+            std::cout << std::endl;
+        }        
+    } 
+    catch(std::exception& e) {
+        std::cerr << e.what() << std::endl;
     }
     
     return 0;
