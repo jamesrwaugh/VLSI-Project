@@ -57,7 +57,7 @@ std::pair<std::string, std::string> getGateIONames(const std::string& fullIOName
     return std::make_pair(gateName, connName);
 }
 
-std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& cells)
+std::vector<module> readModuleFile(const std::string& fileName, const MattCellFile& cells)
 {
     static const std::string delim = " \t";
 

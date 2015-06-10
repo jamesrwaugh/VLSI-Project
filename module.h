@@ -23,6 +23,6 @@ struct module
  * with their connectivity matricies and standard cell gates.
  * Uses a MattCellFile to check and load standard cell information
  */
-std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& cells);
+std::vector<module> readModuleFile(const std::string& fileName, const MattCellFile& cells);
 
 #endif

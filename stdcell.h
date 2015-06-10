@@ -32,7 +32,7 @@ public:
     MattCellFile(const std::string& filename);
 
     //Lookup a standard cell definition by name
-    const stdcell& operator[](const std::string& cell_name);
+    const stdcell& operator[](const std::string& cell_name) const;
 
 private:
     //Output operator

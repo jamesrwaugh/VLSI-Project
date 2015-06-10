@@ -37,12 +37,12 @@ MattCellFile::MattCellFile(const std::string& filename)
     }
 }
 
-const stdcell& MattCellFile::operator[](const std::string& cell_name)
+const stdcell& MattCellFile::operator[](const std::string& cell_name) const
 {
     if(cells.find(cell_name) == cells.end()) {
         error("Standard cell \"", cell_name, "\" does not exist in \"", cellfilename, "\"");
     }
-    return cells[cell_name];
+    return cells.at(cell_name);
 }
 
 void MattCellFile::readCell(std::istream& is, stdcell& d, int lineNumber)
