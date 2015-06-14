@@ -2,7 +2,9 @@
 #include <sstream>
 #include <ios>
 #include <iomanip>
+#include <fstream>
 #include <algorithm>
+#include "utility.h"
 #include "output.h"
 
 void tryAppend(std::string& target, const std::string& candidate)
@@ -27,8 +29,10 @@ void getSubcktWireLines(const module& partition,
     /* We look though each gate's inputs and outputs. If they do not tie to the
      * module's inputs or outputs, they are wires that connect to other gates.
      * We need to declare each of these */
-    for(const stdcell& g : partition.gates) 
+    for(unsigned i = 2; i < partition.gates.size(); ++i)
     {
+        const stdcell& g = partition.gates[i];
+
         for(const std::string& pin : g.inputs) {
             bool found = std::find(inputs.begin(), inputs.end(), pin) != inputs.end();
             if(found) tryAppend(inputLine,pin); 
@@ -41,12 +45,12 @@ void getSubcktWireLines(const module& partition,
         }
     }
     
-    if(!wireLine.empty())    //If wires aded, insert WIRE and remove last comma
-        wireLine.insert(0, "  .WIRE").pop_back();
-    if(!inputs.empty())        //Removing last comma
-        inputLine.pop_back();
-    if(!outputs.empty())    //Removing last comma
-        outputLine.pop_back();        
+    if(!wireLine.empty())
+        wireLine.insert(0, "  .WIRE").pop_back();   //If wires aded, insert WIRE and remove last comma
+    if(!inputs.empty())
+        inputLine.pop_back();   //Removing last comma
+    if(!outputs.empty())
+        outputLine.pop_back();  //Removing last comma
         
     out_inputs = std::move(inputLine);
     out_output = std::move(outputLine);
@@ -62,12 +66,12 @@ void getSubcktGateLine(const stdcell& gate, int count, const MattCellFile& cells
     const stdcell& cell = cells[gate.name];    //To get standard information (the A part below)
     
     //Give a .A(B) string for each input/output and its attachment. Bad duplicated code.
-    for(int i = 0; i != gate.inputs.size(); ++i) {
+    for(unsigned i = 0; i != gate.inputs.size(); ++i) {
         std::string connection = ".";
         connection.append(cell.inputs[i]).append("(").append(gate.inputs[i]).append(")");
         ss << std::left << std::setw(12) << connection;
     }
-    for(int i = 0; i != gate.outputs.size(); ++i) {
+    for(unsigned i = 0; i != gate.outputs.size(); ++i) {
         std::string connection = ".";
         connection.append(cell.outputs[i]).append("(").append(gate.outputs[i]).append(")");
         ss << std::left << std::setw(12) << connection;
@@ -76,7 +80,9 @@ void getSubcktGateLine(const stdcell& gate, int count, const MattCellFile& cells
     out = std::move(ss.str());
 }
 
-
+/* Given a module, returns the .subckt text as a string to be written in
+ * the slice .subckts file. `sliceNum` is the number of the slice containing the
+ * partition, and `partitionNum` is the number of the partition in the slice */
 std::string getSubcktText(const module& partition, const MattCellFile& cells, int sliceNum, int partitionNum)
 {
     std::stringstream ss;
@@ -84,7 +90,7 @@ std::string getSubcktText(const module& partition, const MattCellFile& cells, in
     //The initial comment and ".subckt Px_YY" line
     ss << "#subckt describing partition "   << partitionNum << " in slice " 
        << std::setfill('0') << std::setw(2) << sliceNum << '\n'; 
-    ss << ".subckt P" << 0  << "_"  << std::setfill('0') << std::setw(2) << 1;
+    ss << ".subckt P" << sliceNum  << "_"  << std::setfill('0') << std::setw(2) << partitionNum;
 
     //The a.I, b.I, y.O etc text after name
     for(const std::string& s : partition.gates[0].outputs)
@@ -99,7 +105,7 @@ std::string getSubcktText(const module& partition, const MattCellFile& cells, in
     ss << dec_inputs << '\n' << dec_outputs << '\n' << dec_wires << '\n';
     
     //Gate lines
-    for(int i = 2; i < partition.gates.size(); ++i) {
+    for(unsigned i = 2; i < partition.gates.size(); ++i) {
         const stdcell& gate = partition.gates[i];
         std::string s;
         getSubcktGateLine(gate, i-2, cells, s);
@@ -109,4 +115,28 @@ std::string getSubcktText(const module& partition, const MattCellFile& cells, in
     //Ending syntax
     ss << ".end_subckt" << '\n';
     return ss.str();
+}
+
+/****************************************************************************/
+
+SubcktFile::SubcktFile(const std::string &filename, int sliceNum, const MattCellFile &cells)
+    : sliceNumber(sliceNum)
+    , partitionNumber(0)
+    , cellsRef(cells)
+{
+    file.open(filename);
+    if(!file.is_open()) {
+        error("Could not open .subckt file ", filename, " for writing");
+    }
+}
+
+SubcktFile::~SubcktFile()
+{
+    file.close();
+}
+
+std::ostream& SubcktFile::operator<<(const module& partition)
+{
+    file << getSubcktText(partition, cellsRef, sliceNumber, partitionNumber++);
+    return file;
 }

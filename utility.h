@@ -41,23 +41,23 @@ void printVector(std::vector<printType> const &elements)
 }
 
 //Provides a << operator for any standard container
-template<typename T, class = typename std::enable_if<
-	!std::is_same<T,std::string>::value && std::is_class<T>::value>::type>
-std::ostream& operator<<(std::ostream& os, const T& cntr)
+template<typename T, class = decltype(std::declval<T>().begin())>
+typename std::enable_if<!std::is_same<T,std::string>::value, std::ostream&>::type
+operator<<(std::ostream& os, const T& cntr)
 {
-	os << '[';
-	if(not(cntr.empty())) {
-		auto end = std::prev(cntr.end());
-		for(auto it = cntr.begin(); it != end; ++it)
-			os << *it << ",";
-		os << *end;
-	}
-	os << ']';
+    os << '[';
+    if(not(cntr.empty())) {
+        auto end = std::prev(cntr.end());
+        for(auto it = cntr.begin(); it != end; ++it)
+            os << *it << ",";
+        os << *end;
+    }
+    os << ']';
 
-	return os;
+    return os;
 }
 
-//Used for format a string into a runetime_error.
+//Used to format strings into a runtime_error.
 //See http://en.cppreference.com/w/cpp/language/parameter_pack
 template<typename... Ts>
 void error(Ts... args)
