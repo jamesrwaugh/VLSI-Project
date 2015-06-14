@@ -2,6 +2,8 @@
 #include "stdcell.h"
 #include "module.h"
 #include "utility.h"
+#include "kerninghan.h"
+#include "output.h"
 
 int main(int argc, char** argv)
 {
@@ -13,16 +15,20 @@ int main(int argc, char** argv)
 
     try 
     {
-        //Loads all files
+        //Loads all files and information
         MattCellFile cells(argv[1]);
-        std::vector<module> modules = readModuleFile(argv[2], cells);    
+        std::vector<module> modules = readModuleFile(argv[2], cells);
+        SubcktFile ckts("slice00.subckts", 0, cells);
         
-        //Outputs connectivity matricies
-        for(module& m : modules) {
-            for(std::vector<int>& row : m.connections)
-                std::cout << row << std::endl;
-            std::cout << std::endl;
-        }        
+        //Partitions each module and writes .subckts
+        for(const module& m : modules)
+        {
+            auto partitions = kernighanLin(m);
+
+            std::cout << "Writing partitions for \"" << partitions.first.name << "\"" << std::endl;
+            ckts << partitions.first  << std::endl;
+            ckts << partitions.second << std::endl;
+        }
     } 
     catch(std::exception& e) {
         std::cerr << e.what() << std::endl;
