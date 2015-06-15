@@ -264,12 +264,8 @@ void fixIOGates(module& m)
     allIns.resize(std::unique(allIns.begin(), allIns.end()) - allIns.begin());
     allOuts.resize(std::unique(allOuts.begin(), allOuts.end()) - allOuts.begin());
 
-    /* FIXME: Problem: When a gate's output ties to a internal AND external gate.
-     * Currently it is only left as a wire, externals not considered
-     */
-
     //The IOs we want to keep are present in both allIns/allOuts and original non-partitioned inputs/outputs
-    std::set_intersection(allIns.begin(), allIns.end(), inputs.begin(), inputs.end(), std::back_inserter(realIns));
+    std::set_intersection(allIns.begin(),   allIns.end(),  inputs.begin(),  inputs.end(), std::back_inserter(realIns));
     std::set_intersection(allOuts.begin(), allOuts.end(), outputs.begin(), outputs.end(), std::back_inserter(realOuts));
 
     //All present in outputs that aren't present in any gate's input are new outputs of the module
@@ -348,15 +344,38 @@ void removeIOGates(module& m)
         row.erase(row.begin(), row.begin() + 2);
 }
 
+//Remedy for wires wires that connect to both the internal and external partitions
+void fixInterPartitionWires(module& r0, module& r1, const module& src)
+{
+    //Module inputs that are not from src and DO NOT have wires from the other partition
+    //are added as outputs from the other partition
+    /* How this is done:
+     * - push back (r0.inputs - src.inputs) into outputs
+     * - merge the seperated two ranges (outputs and added range) inside output
+     * - remove duplicates from outputs */
+    auto& inputs = r0.gates[0].outputs;
+    auto& outputs = r1.gates[1].inputs;
+    const auto& srcins = src.gates[0].outputs;
+    size_t oldsize = outputs.size();
+    std::set_difference(inputs.begin(), inputs.end(), srcins.begin(), srcins.end(), std::back_inserter(outputs));
+    std::inplace_merge(outputs.begin(), outputs.begin() + oldsize, outputs.end());
+    outputs.resize(std::unique(outputs.begin(), outputs.end()) - outputs.begin());
+}
+
 std::pair<module, module> kernighanLin(const module& m)
 {
     module r0, r1;
     module m_kl = m;
 
+    //I/O gates are hidden from the KL algorithm
     removeIOGates(m_kl);
     auto partitions = kernighanLin(m_kl.connections);
 
+    //After partition, the I/O gates are terribly broken.
     rebuildModule(r0, partitions.second, m);
     rebuildModule(r1, partitions.first, m);
+    fixInterPartitionWires(r0, r1, m);
+    fixInterPartitionWires(r1, r0, m);
+
     return std::make_pair(std::move(r0), std::move(r1));
 }
