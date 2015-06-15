@@ -1,5 +1,6 @@
 #include <sstream>
-#include <exception>
+#include <fstream>
+#include "utility.h"
 #include "padframe.h"
 
 PadframeFile::PadframeFile(const std::string& filename)
@@ -9,9 +10,7 @@ PadframeFile::PadframeFile(const std::string& filename)
     //Error if unable to open file
     std::ifstream file(filename);
     if(!file.is_open()) {
-        std::ostringstream ss;
-        ss << "Padframe definition file \"" << filename << "\" not found.";
-        throw std::runtime_error(ss.str());
+        error("Padframe definition file \"", filename, "\" not found");
     }
 
     //Read in file data scanning what we want
@@ -37,7 +36,7 @@ PadframeFile::PadframeFile(const std::string& filename)
 
     //Error if we did not find .SLICES or .USABLE lines
     if(!(usableFound && slicesFound)) {
-        throw std::runtime_error(".SLICES or .USABLE not found in padframe file");
+        error("Padframe file \"", filename, "\" missing .USABLE or .SLICES");
     }
 }
 

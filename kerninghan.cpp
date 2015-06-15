@@ -35,12 +35,12 @@ public:
 private:
     partition a;    //Partition A
     partition b;    //Partition B
-    partition ap;    //Partition A'
-    partition bp;    //Partition B'
-    vint  external;    //Vector of # external wires for each gate
-    vint  internal;    //Vector of # internal wires for each gate
-    vint  swapped;    //WHo's been swapped?
-    vint  d_values;    //Calculated D values (external[g] - internal[g])
+    partition ap;   //Partition A'
+    partition bp;   //Partition B'
+    vint  external; //Vector of # external wires for each gate
+    vint  internal; //Vector of # internal wires for each gate
+    vint  swapped;  //WHo's been swapped?
+    vint  d_values; //Calculated D values (external[g] - internal[g])
     vvint gains;    //gain values matrix
     
 private:
@@ -130,7 +130,7 @@ private:
         return swappair(max_i, max_j, max_value);
     }
     
-    std::pair<int,int> getBestPartialSumKG(std::vector<swappair>& swapPair, const vvint& matrix)
+    std::pair<int,int> getBestPartialSumKG(std::vector<swappair>& swapPair)
     {
         std::vector<int> gis(swapPair.size());
         std::vector<int> sums(swapPair.size());
@@ -202,7 +202,7 @@ private:
 
             /* After A' and B' are empty, we find a k to maximize g_max, the sum of gv[1],...,gv[k].
              * Then if g_max > 0, from 0 to k av and bv are swapped in a and b--the original partitions */             
-            auto kg_pair = getBestPartialSumKG(swapPairs, matrix);
+            auto kg_pair = getBestPartialSumKG(swapPairs);
             int k_max = kg_pair.first;
             int g_max = kg_pair.second;
             if(g_max > 0) {
@@ -256,13 +256,17 @@ void fixIOGates(module& m)
         allOuts.insert(allOuts.end(), gi.outputs.begin(), gi.outputs.end());
     }
 
-    //We need to sort them to use set functions Also remove duplicates from allI/allO
+    //We need to sort them to use set functions. Also remove duplicates from allI/allO
     std::sort(inputs.begin(), inputs.end());
     std::sort(outputs.begin(), outputs.end());
     std::sort(allIns.begin(), allIns.end());
     std::sort(allOuts.begin(), allOuts.end());
     allIns.resize(std::unique(allIns.begin(), allIns.end()) - allIns.begin());
     allOuts.resize(std::unique(allOuts.begin(), allOuts.end()) - allOuts.begin());
+
+    /* FIXME: Problem: When a gate's output ties to a internal AND external gate.
+     * Currently it is only left as a wire, externals not considered
+     */
 
     //The IOs we want to keep are present in both allIns/allOuts and original non-partitioned inputs/outputs
     std::set_intersection(allIns.begin(), allIns.end(), inputs.begin(), inputs.end(), std::back_inserter(realIns));

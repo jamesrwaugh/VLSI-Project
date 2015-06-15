@@ -1,6 +1,5 @@
 #include <iostream>
 #include <sstream>
-#include <ios>
 #include <iomanip>
 #include <fstream>
 #include <algorithm>
@@ -35,18 +34,16 @@ void getSubcktWireLines(const module& partition,
 
         for(const std::string& pin : g.inputs) {
             bool found = std::find(inputs.begin(), inputs.end(), pin) != inputs.end();
-            if(found) tryAppend(inputLine,pin); 
-                else  tryAppend(wireLine ,pin);
+            tryAppend((found) ? inputLine : wireLine, pin);
         }
         for(const std::string& pin : g.outputs) {
             bool found = std::find(outputs.begin(), outputs.end(), pin) != outputs.end();
-            if(found) tryAppend(outputLine,pin); 
-                else  tryAppend(wireLine ,pin);
+            tryAppend((found) ? outputLine : wireLine, pin);
         }
     }
     
     if(!wireLine.empty())
-        wireLine.insert(0, "  .WIRE").pop_back();   //If wires aded, insert WIRE and remove last comma
+        wireLine.insert(0, "  .WIRE").pop_back();   //If wires added, insert WIRE and remove last comma
     if(!inputs.empty())
         inputLine.pop_back();   //Removing last comma
     if(!outputs.empty())
@@ -100,9 +97,11 @@ std::string getSubcktText(const module& partition, const MattCellFile& cells, in
     ss << '\n';
 
     //.IN, .OUT, and .WIRE lines
-    std::string dec_inputs, dec_outputs, dec_wires;
-    getSubcktWireLines(partition, dec_inputs, dec_outputs, dec_wires);
-    ss << dec_inputs << '\n' << dec_outputs << '\n' << dec_wires << '\n';
+    std::string inputLine, outputLine, wireLine;
+    getSubcktWireLines(partition, inputLine, outputLine, wireLine);
+    if(!inputLine.empty())  ss << inputLine  << '\n';
+    if(!outputLine.empty()) ss << outputLine << '\n';
+    if(!wireLine.empty())   ss << wireLine   << '\n';
     
     //Gate lines
     for(unsigned i = 2; i < partition.gates.size(); ++i) {

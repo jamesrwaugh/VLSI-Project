@@ -10,7 +10,7 @@ std::vector<std::string> Split(const std::string& target, const std::string& del
         result.push_back(target.substr(startPos, it - startPos));
         startPos = target.find_first_not_of(delims, it+1);
     }
-    while(it != std::string::npos);
+    while(startPos != std::string::npos);
     
     return result;
 }

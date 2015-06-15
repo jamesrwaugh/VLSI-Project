@@ -10,7 +10,7 @@
 void cellIO(std::vector<module>& m)
 {
     //go through all structures
-    for(int i=0; i<m.size(); ++i)
+    for(unsigned i=0; i<m.size(); ++i)
     {
         //Get gates and resize the connectivity matirx
         std::vector<stdcell>& g = m[i].gates;
@@ -19,16 +19,16 @@ void cellIO(std::vector<module>& m)
             row.resize(g.size());
 
         //for each gates in module m[i]
-        for(int j=0; j<g.size(); ++j)
+        for(unsigned j=0; j<g.size(); ++j)
         {
             //for each gate output, find a gate with the proper input
-            for(int k=0; k<g[j].outputs.size(); ++k)
+            for(unsigned k=0; k<g[j].outputs.size(); ++k)
             {
                 //check array of gates in this model
-                for(int l=0; l<g.size(); ++l)
+                for(unsigned l=0; l<g.size(); ++l)
                 {
                     //for each input
-                    for(int n=0; n<g[l].inputs.size(); ++n)
+                    for(unsigned n=0; n<g[l].inputs.size(); ++n)
                     {
                         if(g[j].outputs[k] == g[l].inputs[n])
                         {
@@ -65,7 +65,7 @@ std::vector<module> readModuleFile(const std::string& fileName, const MattCellFi
     std::ifstream stream(fileName);
     std::string line;
     module tmpModel;
-    int lineCount = 1;    //Which line we are on
+    int lineCount = 0;    //Which line we are on
     
     if(!stream.is_open()) {
         error("Could not open netlibf module file \"", fileName, "\"");
@@ -86,7 +86,7 @@ std::vector<module> readModuleFile(const std::string& fileName, const MattCellFi
             stdcell tmpCell;
             std::vector<std::string> inputInfo = Split(line, delim);
             tmpCell.name = "inputs";
-            for(int i=1; i<inputInfo.size(); ++i) {
+            for(unsigned i=1; i<inputInfo.size(); ++i) {
                 tmpCell.outputs.push_back(inputInfo[i]);
             }
             tmpModel.gates.push_back(tmpCell);
@@ -96,7 +96,7 @@ std::vector<module> readModuleFile(const std::string& fileName, const MattCellFi
             stdcell tmpCell;
             std::vector<std::string> outputInfo = Split(line, delim);
             tmpCell.name = "outputs";
-            for(int i=1; i<outputInfo.size(); ++i) {
+            for(unsigned i=1; i<outputInfo.size(); ++i) {
                 tmpCell.inputs.push_back(outputInfo[i]);
             }
             tmpModel.gates.push_back(tmpCell);
@@ -107,7 +107,7 @@ std::vector<module> readModuleFile(const std::string& fileName, const MattCellFi
             std::vector<std::string> gateInfo = Split(line, delim);
             tmpCell.name = gateInfo[1];
 
-            for(int i=2; i<gateInfo.size(); ++i)
+            for(unsigned i=2; i<gateInfo.size(); ++i)
             {
                 //Map lookup standard cell information and fill tmpCell
                 const stdcell& cell = cells[tmpCell.name];    
