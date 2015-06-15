@@ -7,13 +7,13 @@
 
 struct module
 {
-	//Ordered list of gates as definitions only
-	std::vector<stdcell> gates;
-	
-	//Connectivity matrix of the module gates
-	std::vector<std::vector<int>> connections;
+    //Ordered list of gates as definitions only
+    std::vector<stdcell> gates;
     
-	//Module name
+    //Connectivity matrix of the module gates
+    std::vector<std::vector<int>> connections;
+    
+    //Module name
     std::string name;
 };
 
@@ -23,6 +23,6 @@ struct module
  * with their connectivity matricies and standard cell gates.
  * Uses a MattCellFile to check and load standard cell information
  */
-std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& cells);
+std::vector<module> readModuleFile(const std::string& fileName, const MattCellFile& cells);
 
 #endif

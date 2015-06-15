@@ -57,17 +57,25 @@ std::pair<std::string, std::string> getGateIONames(const std::string& fullIOName
     return std::make_pair(gateName, connName);
 }
 
-std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& cells)
+std::vector<module> readModuleFile(const std::string& fileName, const MattCellFile& cells)
 {
     static const std::string delim = " \t";
 
     std::vector<module> allModels;
-    module tmpModel;
     std::ifstream stream(fileName);
     std::string line;
+    module tmpModel;
+    int lineCount = 1;    //Which line we are on
     
-    while(getline_fixed(stream, line))
+    if(!stream.is_open()) {
+        error("Could not open netlibf module file \"", fileName, "\"");
+    }
+    
+    int linesRead;
+    while(getline_fixed(stream, line, linesRead))
     {
+        lineCount += linesRead;
+    
         if(line.find(".model") != std::string::npos)
         {
             std::vector<std::string> tmpName = Split(line, delim);
@@ -106,17 +114,24 @@ std::vector<module> readModuleFile(const std::string& fileName, MattCellFile& ce
                 tmpCell.width = cell.width;
                 tmpCell.length = cell.length;
                 const std::vector<std::string>& outs = cell.outputs;
+                const std::vector<std::string>& ins = cell.inputs;
 
                 //Parses the A=[B] or A=B string into "gateName" A and "connectName" B
                 auto connectName = getGateIONames(gateInfo[i]);
                 
-                /* Look for the "gateName" in the cell's gate outputs. If it is there, then it is connected
-                 * to `connectName` through that gate pin. Push back into outputs/inputs 
+                /* Look for the "gateName" in the cell's gate outputs. If it is there, then it is 
+                 * connected to `connectName` through that gate pin. Push back into outputs/inputs 
                  */
                 if(std::find(outs.begin(), outs.end(), connectName.first) != outs.end()) {
                     tmpCell.outputs.push_back(connectName.second);
-                }  else {
+                } 
+                else if(std::find(ins.begin(), ins.end(), connectName.first) != ins.end()) {
                     tmpCell.inputs.push_back(connectName.second);
+                }
+                else {
+                    error(fileName, ":", lineCount, ": ", "Pin connection \"", connectName.first, 
+                        "\" did not match any pin on cell \"", tmpCell.name, "\" ", 
+                        cell.inputs, cell.outputs); 
                 }
             }
 

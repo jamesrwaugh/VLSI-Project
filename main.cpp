@@ -2,20 +2,36 @@
 #include "stdcell.h"
 #include "module.h"
 #include "utility.h"
+#include "kerninghan.h"
+#include "output.h"
 
 int main(int argc, char** argv)
 {
-    MattCellFile cells("usf_ami05_std_cells.lib");
-    std::cout << cells << std::endl;
-    
-    std::vector<module> models = readModuleFile(argv[1], cells);
+    //If not enough arguments print usage
+    if(argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <stdcell file> <module file>" << std::endl;
+        return 1;
+    }
 
-    //Outputs connectivity matricies
-    for(module& m : models) {
-        for(std::vector<int>& row : m.connections) {
-            std::cout << row << std::endl;
+    try 
+    {
+        //Loads all files and information
+        MattCellFile cells(argv[1]);
+        std::vector<module> modules = readModuleFile(argv[2], cells);
+        SubcktFile ckts("slice00.subckts", 0, cells);
+        
+        //Partitions each module and writes .subckts
+        for(const module& m : modules)
+        {
+            auto partitions = kernighanLin(m);
+
+            std::cout << "Writing partitions for \"" << partitions.first.name << "\"" << std::endl;
+            ckts << partitions.first  << std::endl;
+            ckts << partitions.second << std::endl;
         }
-        std::cout << std::endl;
+    } 
+    catch(std::exception& e) {
+        std::cerr << e.what() << std::endl;
     }
     
     return 0;

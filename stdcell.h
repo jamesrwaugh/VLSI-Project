@@ -32,14 +32,18 @@ public:
     MattCellFile(const std::string& filename);
 
     //Lookup a standard cell definition by name
-    const stdcell& operator[](const std::string& cell_name);
+    const stdcell& operator[](const std::string& cell_name) const;
 
 private:
     //Output operator
     friend std::ostream& operator<<(std::ostream& os, const MattCellFile& mc);
+    
+    //Parses a stdcell from a line
+    void readCell(std::istream& is, stdcell& d, int lineNumber);
 
-    //Stores standard cell information
+    //Data members
     std::map<std::string, stdcell> cells;
+    std::string cellfilename;
 };
 
 

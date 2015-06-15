@@ -2,6 +2,8 @@
 #define UTILITY_H
 #include <vector>
 #include <string>
+#include <stdexcept>
+#include <sstream>
 #include <iostream>
 
 /* Improved Split funtion that skips over consecutive delimiters, 
@@ -15,8 +17,9 @@ void trim(std::string& s);
 void removeComments(std::string& s);
 
 /* A drop-in replacement for std::getline that combines multiple lines ending in "\"
- * together into a single line, removes comments, and removes whitespace */
-std::istream& getline_fixed(std::istream& is, std::string& line);
+ * together into a single line, removes comments, and removes whitespace. Returns number
+ * of lines read into `lineCount` */
+std::istream& getline_fixed(std::istream& is, std::string& line, int& lineCount);
 
 //roger - use this for printing a string on a single line
 template <typename printType>
@@ -38,20 +41,31 @@ void printVector(std::vector<printType> const &elements)
 }
 
 //Provides a << operator for any standard container
-template<typename T, class = typename std::enable_if<
-	!std::is_same<T,std::string>::value && std::is_class<T>::value>::type>
-std::ostream& operator<<(std::ostream& os, const T& cntr)
+template<typename T, class = decltype(std::declval<T>().begin())>
+typename std::enable_if<!std::is_same<T,std::string>::value, std::ostream&>::type
+operator<<(std::ostream& os, const T& cntr)
 {
-	os << '[';
-	if(not(cntr.empty())) {
-		auto end = std::prev(cntr.end());
-		for(auto it = cntr.begin(); it != end; ++it)
-			os << *it << ",";
-		os << *end;
-	}
-	os << ']';
+    os << '[';
+    if(not(cntr.empty())) {
+        auto end = std::prev(cntr.end());
+        for(auto it = cntr.begin(); it != end; ++it)
+            os << *it << ",";
+        os << *end;
+    }
+    os << ']';
 
-	return os;
+    return os;
+}
+
+//Used to format strings into a runtime_error.
+//See http://en.cppreference.com/w/cpp/language/parameter_pack
+template<typename... Ts>
+void error(Ts... args)
+{
+    std::stringstream ss;
+    int dummy[sizeof...(Ts)] = { (ss << args, 0)... };
+    (void)dummy;
+    throw std::runtime_error(ss.str());
 }
 
 #endif
