@@ -16,10 +16,13 @@ public:
      SubcktFile(const std::string &filename, int sliceNum, const MattCellFile &cells);
     ~SubcktFile();
 
-     //Operator to write .subckt text to the file for a module
-     std::ostream& operator<<(const module& partition);
+     //Operator to write .subckt text to the file for a partition pair
+     std::ostream& operator<<(const std::pair<module,module>& partitions);
 
 private:
+    //The header comments of partitions, external wire and gate amounts
+    std::string getHeaderText(const std::pair<module, module>& p);
+
     int sliceNumber;
     int partitionNumber;
     std::ofstream file;

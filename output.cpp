@@ -6,6 +6,9 @@
 #include "utility.h"
 #include "output.h"
 
+//To make life a bit easier in this file
+typedef std::pair<module,module> partition;
+
 void tryAppend(std::string& target, const std::string& candidate)
 {
     if(target.find(candidate) == std::string::npos)
@@ -116,6 +119,31 @@ std::string getSubcktText(const module& partition, const MattCellFile& cells, in
     return ss.str();
 }
 
+std::string getSubcktText(const partition& p, const MattCellFile &cells, int sliceNum, int partitionNum)
+{
+    std::stringstream ss;
+    ss << getSubcktText(p.first, cells, sliceNum, partitionNum) << std::endl;
+    ss << getSubcktText(p.second, cells, sliceNum, partitionNum+1);
+    return ss.str();
+}
+
+int getExternWireCost(const module& a, const module& b)
+{
+    std::vector<std::string> wires;
+    const auto& ins0  = a.gates[0].outputs;
+    const auto& ins1  = b.gates[0].outputs;
+    const auto& outs0 = a.gates[1].inputs;
+    const auto& outs1 = b.gates[1].inputs;
+
+    //External wire cost is easily determined as intersection between
+    //the inputs and outputs across modules
+    std::set_intersection(ins0.begin(), ins0.end(), outs1.begin(), outs1.end(), std::back_inserter(wires));
+    std::set_intersection(ins1.begin(), ins1.end(), outs0.begin(), outs0.end(), std::back_inserter(wires));
+
+    //`wires` now contains all external wiring between a and b
+    return wires.size();
+}
+
 /****************************************************************************/
 
 SubcktFile::SubcktFile(const std::string &filename, int sliceNum, const MattCellFile &cells)
@@ -134,8 +162,27 @@ SubcktFile::~SubcktFile()
     file.close();
 }
 
-std::ostream& SubcktFile::operator<<(const module& partition)
+std::string SubcktFile::getHeaderText(const std::pair<module,module>& p)
 {
-    file << getSubcktText(partition, cellsRef, sliceNumber, partitionNumber++);
+    char buffer[32];
+    std::stringstream ss;
+
+    const module& a = p.first;
+    const module& b = p.second;
+    int cost = getExternWireCost(a, b);
+    std::sprintf(buffer, "#External wiring for P%d_%02d,P%d_%02d: %d\n",
+        sliceNumber, partitionNumber, sliceNumber, partitionNumber+1, cost);
+    ss << buffer;
+    std::sprintf(buffer, "#Gate counts: %lu,%lu\n", a.gates.size()-2, b.gates.size()-2);
+    ss << buffer;
+
+    return ss.str();
+}
+
+std::ostream& SubcktFile::operator<<(const std::pair<module,module>& partitions)
+{
+    file << getHeaderText(partitions) << std::endl;
+    file << getSubcktText(partitions, cellsRef, sliceNumber, partitionNumber) << std::endl;
+    partitionNumber += 2;
     return file;
 }

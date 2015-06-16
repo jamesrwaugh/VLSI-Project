@@ -26,8 +26,7 @@ int main(int argc, char** argv)
             auto partitions = kernighanLin(m);
 
             std::cout << "Writing partitions for \"" << partitions.first.name << "\"" << std::endl;
-            ckts << partitions.first  << std::endl;
-            ckts << partitions.second << std::endl;
+            ckts << partitions;
         }
     } 
     catch(std::exception& e) {
