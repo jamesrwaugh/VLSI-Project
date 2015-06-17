@@ -281,55 +281,41 @@ void fixIOGates(module& m)
     realOuts.resize(std::unique(realOuts.begin(), realOuts.end()) - realOuts.begin());
 }
 
-void rebuildModule(module& dest, vint notGates, const module& src)
+//KL gives us only a list of gates like [1, 3, 4, 5]. `rebuildModule` builds a proper `module`
+//using the list from KL, cutting from src (original) to partitioned (dest), where `gates`
+//is the output from KL that should be in the partition.
+void rebuildModule(module& dest, vint gates, const module& src)
 {
-    std::vector<connpair> newConns;
-    std::vector<cellpair> newGates;
+    dest.name = src.name;
 
-    //To avoid shit about I/Os being first gate
-    for(int& g : notGates)
-        g += 2;
+    //Artifically inserting IO gates, will be +2 later
+    gates.insert(gates.begin(), -1);    //Output gate
+    gates.insert(gates.begin(), -2);    //Inptus gate
 
-    std::set<gate> notGatesS(notGates.begin(), notGates.end());  //for log(n) lookups and syntax sugar
+    //Allocate space for the new connectivity matrix
+    int nGates = gates.size();
+    dest.connections.resize(nGates);
+    for(vint& row : dest.connections)
+        row.resize(nGates);
 
+    for(int i = 0; i != nGates; ++i)
     {
-        //We are copying everything over into new arrays combined with initial indicies
-        //in a pair set along with them, to keep track of their original positions.
-        int i = 0;
-        for(const vint& row : src.connections)
-            newConns.emplace_back(std::make_pair(i++, row));
-        i = 0;
-        for(const stdcell& cell : src.gates)
-            newGates.emplace_back(std::make_pair(i++, cell));
-    }
+        //+2 to avoid shit about I/Os being first gates...
+        //Beacause KL does not see the first two gates
+        gate g = gates[i] + 2;
 
-    {
-        //This is erasing rows belonging to the removed gates
-        auto it = std::remove_if(newConns.begin(), newConns.end(),
-            [&](const connpair& row) { return notGatesS.find(row.first) != notGatesS.end(); });
-        newConns.erase(it, newConns.end());
+        //Copy a gate `g` over
+        dest.gates.push_back(src.gates[g]);
 
-        //This is taking the remaining rows and removing columns that were removed
-        for(connpair& row : newConns) {
-            auto it = std::remove_if(row.second.begin(), row.second.end(),
-                [&](gate g) { return notGatesS.find(g) != notGatesS.end(); });
-            row.second.erase(it, row.second.end());
+        //We are rebuilding the connectivity matrix to only those gates
+        //we should be keeping. We are transforming [g][h] into [i][j]
+        for(int j = 0; j != nGates; ++j) {
+            gate h = gates[j] + 2;
+            dest.connections[i][j] += src.connections[g][h];
         }
     }
 
-    {
-        //Here we are removing standard cell gates themselves that were removed
-        auto it = std::remove_if(newGates.begin(), newGates.end(),
-            [&](const cellpair& p){ return notGatesS.find(p.first) != notGatesS.end(); });
-        newGates.erase(it, newGates.end());
-    }
-
-    //Now, copy the modified connections and gates to dest
-    dest.name = src.name;
-    for(auto& pair : newConns) dest.connections.push_back(std::move(pair.second));
-    for(auto& pair : newGates) dest.gates.push_back(std::move(pair.second));
-
-    //We need to fix io gates (gates[0] and [1]) because some gates were removed
+    //Now we need to fix io gates (gates[0] and [1]) because some gates were removed
     fixIOGates(dest);
 }
 
@@ -372,8 +358,8 @@ std::pair<module, module> kernighanLin(const module& m)
     auto partitions = kernighanLin(m_kl.connections);
 
     //After partition, the I/O gates are terribly broken.
-    rebuildModule(r0, partitions.second, m);
-    rebuildModule(r1, partitions.first, m);
+    rebuildModule(r0, partitions.first, m);
+    rebuildModule(r1, partitions.second, m);
     fixInterPartitionWires(r0, r1, m);
     fixInterPartitionWires(r1, r0, m);
 
