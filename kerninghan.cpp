@@ -237,7 +237,7 @@ typedef std::pair<int,stdcell> cellpair;
 
 //After the module is partitioned into submodules, the IOs are broken by `rebuildModule`
 //because they are directly copied from the src, and gates are removed from src.
-//Not only that, but connections bewteen partitions are not given by KL. This function fixes these problems.
+//So gate connections between modules are broken. This function fixes this problem.
 void fixIOGates(module& m)
 {
     auto& realIns = m.gates[0].outputs;
@@ -284,13 +284,9 @@ void fixIOGates(module& m)
 //KL gives us only a list of gates like [1, 3, 4, 5]. `rebuildModule` builds a proper `module`
 //using the list from KL, cutting from src (original) to partitioned (dest), where `gates`
 //is the output from KL that should be in the partition.
-void rebuildModule(module& dest, vint gates, const module& src)
+void rebuildModule(module& dest, const vint& gates, const module& src)
 {
     dest.name = src.name;
-
-    //Artifically inserting IO gates, will be +2 later
-    gates.insert(gates.begin(), -1);    //Output gate
-    gates.insert(gates.begin(), -2);    //Inptus gate
 
     //Allocate space for the new connectivity matrix
     int nGates = gates.size();
@@ -302,7 +298,7 @@ void rebuildModule(module& dest, vint gates, const module& src)
     {
         //+2 to avoid shit about I/Os being first gates...
         //Beacause KL does not see the first two gates
-        gate g = gates[i] + 2;
+        gate g = gates[i];
 
         //Copy a gate `g` over
         dest.gates.push_back(src.gates[g]);
@@ -310,24 +306,13 @@ void rebuildModule(module& dest, vint gates, const module& src)
         //We are rebuilding the connectivity matrix to only those gates
         //we should be keeping. We are transforming [g][h] into [i][j]
         for(int j = 0; j != nGates; ++j) {
-            gate h = gates[j] + 2;
+            gate h = gates[j];
             dest.connections[i][j] += src.connections[g][h];
         }
     }
 
-    //Now we need to fix io gates (gates[0] and [1]) because some gates were removed
+    //Now we need to fix IO gates (gates[0] and [1]) because some gates were removed
     fixIOGates(dest);
-}
-
-//Remedy for inputs and outputs gates being gates 0 and 1
-void removeIOGates(module& m)
-{
-    auto& conns = m.connections;
-    auto& gates = m.gates;
-    conns.erase(conns.begin(), conns.begin() + 2);
-    gates.erase(gates.begin(), gates.begin() + 2);
-    for(auto& row : conns)
-        row.erase(row.begin(), row.begin() + 2);
 }
 
 //Remedy for wires wires that connect to both the internal and external partitions
@@ -343,9 +328,33 @@ void fixInterPartitionWires(module& r0, module& r1, const module& src)
     auto& outputs = r1.gates[1].inputs;
     const auto& srcins = src.gates[0].outputs;
     size_t oldsize = outputs.size();
+
     std::set_difference(inputs.begin(), inputs.end(), srcins.begin(), srcins.end(), std::back_inserter(outputs));
     std::inplace_merge(outputs.begin(), outputs.begin() + oldsize, outputs.end());
     outputs.resize(std::unique(outputs.begin(), outputs.end()) - outputs.begin());
+}
+
+/****************************************************************/
+
+//Remedy for inputs and outputs gates being gates 0 and 1
+void removeIOGates(module& m)
+{
+    auto& conns = m.connections;
+    auto& gates = m.gates;
+    conns.erase(conns.begin(), conns.begin() + 2);
+    gates.erase(gates.begin(), gates.begin() + 2);
+    for(auto& row : conns)
+        row.erase(row.begin(), row.begin() + 2);
+}
+
+//Remedy. KL gives back a vint, we just insert 0 and 1 to say IO gates are there too
+//+2 becasue KL retutning the 0th gate is actaully the 2nd gate (no IO gates in KL)
+void insertIOGates(vint& partition)
+{
+    for(int& gate : partition)
+        gate += 2;
+    partition.insert(partition.begin(), 1);    //Output gate
+    partition.insert(partition.begin(), 0);    //Inptus gate
 }
 
 std::pair<module, module> kernighanLin(const module& m)
@@ -353,9 +362,13 @@ std::pair<module, module> kernighanLin(const module& m)
     module r0, r1;
     module m_kl = m;
 
-    //I/O gates are hidden from the KL algorithm
+    //I/O gates are hidden from the KL algorithm...
     removeIOGates(m_kl);
     auto partitions = kernighanLin(m_kl.connections);
+
+    //...Then we are inseting them back
+    insertIOGates(partitions.first);
+    insertIOGates(partitions.second);
 
     //After partition, the I/O gates are terribly broken.
     rebuildModule(r0, partitions.first, m);
