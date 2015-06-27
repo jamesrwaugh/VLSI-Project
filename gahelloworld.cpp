@@ -99,8 +99,3 @@ Citizen GeneticAlgoritm<Citizen>::go()
 
     return pop_alpha.front();
 }
-
-int main()
-{
-
-}
