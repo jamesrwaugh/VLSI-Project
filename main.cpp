@@ -5,6 +5,7 @@
 #include "kerninghan.h"
 #include "output.h"
 
+#if 0
 int main(int argc, char** argv)
 {
     //If not enough arguments print usage
@@ -35,3 +36,4 @@ int main(int argc, char** argv)
     
     return 0;
 }
+#endif
