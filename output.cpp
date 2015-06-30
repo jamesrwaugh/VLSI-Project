@@ -6,51 +6,47 @@
 #include "utility.h"
 #include "output.h"
 
-//To make life a bit easier in this file
-typedef std::pair<module,module> partition;
-
-void tryAppend(std::string& target, const std::string& candidate)
-{
-    if(target.find(candidate) == std::string::npos)
-        target.append(" ").append(candidate).append(",");
-}
-
-
-void getSubcktWireLines(const module& partition, 
+void getSubcktWireLines(const module& partition,
     std::string& out_inputs, std::string& out_output, std::string& out_wires)
 {
     std::string inputLine, outputLine, wireLine;
     const auto& inputs  = partition.gates[0].outputs;
     const auto& outputs = partition.gates[1].inputs;
 
-    if(!inputs.empty())
-        inputLine = "  .IN";
-    if(!outputs.empty())
-        outputLine = "  .OUT";
+    //Add initial .IN and .OUT if we are going to be adding something
+    if(!inputs.empty())  inputLine = ".IN";
+    if(!outputs.empty()) outputLine = ".OUT";
+
+    //Copy the module's inputs/outputs to the .IN and .OUT lines
+    for(const std::string& item :  inputs)
+         inputLine.append(" ").append(item).append(",");
+    for(const std::string& item : outputs)
+        outputLine.append(" ").append(item).append(",");
     
     /* We look though each gate's inputs and outputs. If they do not tie to the
-     * module's inputs or outputs, they are wires that connect to other gates.
-     * We need to declare each of these */
-    for(unsigned i = 2; i < partition.gates.size(); ++i)
-    {
-        const stdcell& g = partition.gates[i];
+     * module's inputs or outputs, they are wires that connect to other gates,
+     * and are added to the .WIRE line if they are not there already */
+    auto tryAddToWireLine =
+    [&](const std::string& pin, const std::vector<std::string>& io) {
+        if((std::find(io.begin(), io.end(), pin) == io.end()) && (wireLine.find(pin) == std::string::npos))
+            wireLine.append(" ").append(pin).append(",");
+    };
 
-        for(const std::string& pin : g.inputs) {
-            bool found = std::find(inputs.begin(), inputs.end(), pin) != inputs.end();
-            tryAppend((found) ? inputLine : wireLine, pin);
-        }
-        for(const std::string& pin : g.outputs) {
-            bool found = std::find(outputs.begin(), outputs.end(), pin) != outputs.end();
-            tryAppend((found) ? outputLine : wireLine, pin);
-        }
+    for(unsigned i = 2; i < partition.gates.size(); ++i) {
+        for(const std::string& pin : partition.gates[i].inputs)
+            tryAddToWireLine(pin, inputs);
+        for(const std::string& pin : partition.gates[i].outputs)
+            tryAddToWireLine(pin, outputs);
     }
     
+    //Removing last commas on the strings.
+    //And if wires is not empty, it needs .WIRE inserted
     if(!wireLine.empty())
-        wireLine.insert(0, "  .WIRE").pop_back();   //If wires added, insert WIRE and remove last comma
+        wireLine.insert(0, ".WIRE").pop_back();
     if(!inputs.empty())
-        inputLine.pop_back();   //Removing last comma
+        inputLine.pop_back();
     if(!outputs.empty())
-        outputLine.pop_back();  //Removing last comma
+        outputLine.pop_back();
         
     out_inputs = std::move(inputLine);
     out_output = std::move(outputLine);
@@ -58,72 +54,84 @@ void getSubcktWireLines(const module& partition,
 }
 
 
-void getSubcktGateLine(const stdcell& gate, int count, const MattCellFile& cells, std::string& out)
+std::string getSubcktGateLine(const stdcell& gate, const MattCellFile& cells, int count)
 {
+    char buffer[64];
     std::stringstream ss;
-    ss << "  x" << count << "\t" << std::left << std::setw(6) << gate.name;
+
+    //Write gate name. ex: "x0 nand2"
+    std::sprintf(buffer, "x%-3d %-6s ", count, gate.name.c_str());
+    ss << buffer;
     
-    const stdcell& cell = cells[gate.name];    //To get standard information (the A part below)
-    
-    //Give a .A(B) string for each input/output and its attachment. Bad duplicated code.
+    //To get standard information (the A part below)
+    const stdcell& cell = cells[gate.name];
+
+    //Give a ".A(B)" string for each input/output and its attachment. Bad duplicated code.
     for(unsigned i = 0; i != gate.inputs.size(); ++i) {
-        std::string connection = ".";
-        connection.append(cell.inputs[i]).append("(").append(gate.inputs[i]).append(")");
-        ss << std::left << std::setw(12) << connection;
+        std::sprintf(buffer, ".%s(%s)", cell.inputs[i].c_str(), gate.inputs[i].c_str());
+        ss << std::left << std::setw(12) << buffer;
     }
     for(unsigned i = 0; i != gate.outputs.size(); ++i) {
-        std::string connection = ".";
-        connection.append(cell.outputs[i]).append("(").append(gate.outputs[i]).append(")");
-        ss << std::left << std::setw(12) << connection;
+        std::sprintf(buffer, ".%s(%s)", cell.outputs[i].c_str(), gate.outputs[i].c_str());
+        ss << std::left << std::setw(12) << buffer;
     }
 
-    out = std::move(ss.str());
+    return ss.str();
 }
 
 /* Given a module, returns the .subckt text as a string to be written in
  * the slice .subckts file. `sliceNum` is the number of the slice containing the
  * partition, and `partitionNum` is the number of the partition in the slice */
-std::string getSubcktText(const module& partition, const MattCellFile& cells, int sliceNum, int partitionNum)
+std::string getSubcktTextSingle(const module& partition, const MattCellFile& cells, int sliceNum, int partitionNum)
 {
     std::stringstream ss;
+    std::string inputLine, outputLine, wireLine;
+
+    /* The format of a .subkt is this:
+     * #subckt describing partition YY in slice X
+     * .subckt PX_YY [Inputs].I [Outputs].O
+     *   .IN [Inputs]
+     *   .OUT [Outputs]
+     *   .WIRE [Wires]
+     *   x0 [Gate]
+     *   x1 [Gate]
+     *   ....
+     *   xN [Gate]
+     * .end_subckt
+     */
     
     //The initial comment and ".subckt Px_YY" line
-    ss << "#subckt describing partition "   << partitionNum << " in slice " 
-       << std::setfill('0') << std::setw(2) << sliceNum << '\n'; 
-    ss << ".subckt P" << sliceNum  << "_"  << std::setfill('0') << std::setw(2) << partitionNum;
+    char buffer[64];
+    std::sprintf(buffer, "#subckt describing partition %d in slice %02d\n", partitionNum, sliceNum);
+    ss << buffer;
+    std::sprintf(buffer, ".subckt P%d_%02d", sliceNum, partitionNum);
+    ss << buffer;
 
-    //The a.I, b.I, y.O etc text after name
-    for(const std::string& s : partition.gates[0].outputs)
-        ss << " " << s << ".I";
-    for(const std::string& s : partition.gates[1].inputs)
-        ss << " " << s << ".O";
+    //The [Inputs] [Outputs] text after name
+    for(const std::string& s : partition.gates[0].outputs)  ss << " " << s << ".I";
+    for(const std::string& s : partition.gates[1].inputs)   ss << " " << s << ".O";
     ss << '\n';
 
     //.IN, .OUT, and .WIRE lines
-    std::string inputLine, outputLine, wireLine;
     getSubcktWireLines(partition, inputLine, outputLine, wireLine);
-    if(!inputLine.empty())  ss << inputLine  << '\n';
-    if(!outputLine.empty()) ss << outputLine << '\n';
-    if(!wireLine.empty())   ss << wireLine   << '\n';
+    if(!inputLine.empty())  ss << " " << inputLine  << '\n';
+    if(!outputLine.empty()) ss << " " << outputLine << '\n';
+    if(!wireLine.empty())   ss << " " << wireLine   << '\n';
     
-    //Gate lines
-    for(unsigned i = 2; i < partition.gates.size(); ++i) {
-        const stdcell& gate = partition.gates[i];
-        std::string s;
-        getSubcktGateLine(gate, i-2, cells, s);
-        ss << s << '\n';
-    }
+    //x0..xN [Gate] Gate lines
+    for(unsigned i = 2; i < partition.gates.size(); ++i)
+        ss << " " << getSubcktGateLine(partition.gates[i], cells, i-2) << '\n';
     
     //Ending syntax
     ss << ".end_subckt" << '\n';
     return ss.str();
 }
 
-std::string getSubcktText(const partition& p, const MattCellFile &cells, int sliceNum, int partitionNum)
+std::string getSubcktText(const std::pair<module,module>& p, const MattCellFile &cells, int sliceNum, int partitionNum)
 {
     std::stringstream ss;
-    ss << getSubcktText(p.first, cells, sliceNum, partitionNum) << std::endl;
-    ss << getSubcktText(p.second, cells, sliceNum, partitionNum+1);
+    ss << getSubcktTextSingle(p.first,  cells, sliceNum, partitionNum) << std::endl;
+    ss << getSubcktTextSingle(p.second, cells, sliceNum, partitionNum+1);
     return ss.str();
 }
 
@@ -157,11 +165,6 @@ SubcktFile::SubcktFile(const std::string &filename, int sliceNum, const MattCell
     }
 }
 
-SubcktFile::~SubcktFile()
-{
-    file.close();
-}
-
 std::string SubcktFile::getHeaderText(const std::pair<module,module>& p)
 {
     char buffer[32];
@@ -169,9 +172,9 @@ std::string SubcktFile::getHeaderText(const std::pair<module,module>& p)
 
     const module& a = p.first;
     const module& b = p.second;
-    int cost = getExternWireCost(a, b);
-    std::sprintf(buffer, "#External wiring for P%d_%02d,P%d_%02d: %d\n",
-        sliceNumber, partitionNumber, sliceNumber, partitionNumber+1, cost);
+    int cost = getExternWireCost(a, b), pn = partitionNumber, sn = sliceNumber;
+
+    std::sprintf(buffer, "#External wiring for P%d_%02d,P%d_%02d: %d\n", sn, pn, sn, pn+1, cost);
     ss << buffer;
     std::sprintf(buffer, "#Gate counts: %lu,%lu\n", a.gates.size()-2, b.gates.size()-2);
     ss << buffer;

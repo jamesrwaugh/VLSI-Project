@@ -14,7 +14,6 @@ class SubcktFile
 {
 public:
      SubcktFile(const std::string &filename, int sliceNum, const MattCellFile &cells);
-    ~SubcktFile();
 
      //Operator to write .subckt text to the file for a partition pair
      std::ostream& operator<<(const std::pair<module,module>& partitions);
