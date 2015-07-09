@@ -2,86 +2,67 @@
 #include <stack>
 #include <string>
 #include "floorplan.h"
+#include "floorplan_citizen.h"
+#include "genetic_algorithm.h"
 #include "utility.h"
 
-std::string floorplan(const module &partition)
+//Floorplan genetic algorithm derivation
+class FloorplanGenetic : public GeneticAlgorithm<floorplan_citizen>
 {
-    (void)(partition);
-    return "Not Implemented Yet!";
-}
+public:
+    using GeneticAlgorithm::GeneticAlgorithm;
 
-/****************************************************/
-
-typedef std::vector<std::vector<char>> floorplan_adjgraph;
-
-/* Floorplan adjacency validation:
- * An entry at i,j is valid if no other connections in row i are connected to j.
- * In other words, Makes i,j not valid if i is connected to something
- * that is connected to j in the same way (both H or V)
- * Note this does not fully correct the problem. But it's enough.
- */
-bool validateAddition(int i, int j, const floorplan_adjgraph& g)
-{
-    for(unsigned connection = 0; connection != g[i].size(); ++connection) {
-        if(g[i][connection] == '-')
-            continue;
-        if(g[i][connection] == g[connection][j])
-            return false;
-    }
-    return true;
-}
-
-/* Calculates a combined vertical/horizontal floorplan adjacency graph
- * from a polish string */
-floorplan_adjgraph adjacencyGraph(const std::string& polish)
-{
-    std::stack<std::vector<int>> stack;
-    floorplan_adjgraph adjGraph;
-
-    adjGraph.resize(9);
-    for(auto& row : adjGraph)
-        row.resize(9,'-');
-
-    for(char c : polish)
+    //Sets the module for the floorplan
+    void setGates(module* gates)
     {
-        if(c == 'H' || c == 'V') {
-            /* We take XY[OP] off the stack, and connect all elements
-             * in lhs to rhs. This usually isn't correct, so it
-             * needs to be validated later. */
-            std::vector<int> lhs = std::move(stack.top()); stack.pop();
-            std::vector<int> rhs = std::move(stack.top()); stack.pop();
-            for(int g : lhs) {
-            for(int h : rhs) {
-                ((c == 'H') ?  adjGraph[g][h] : adjGraph[h][g]) = c;
-            }
-            }
+        this->gates = gates;
+    }
 
-            /* Concatinate vector rhs to lhs and push result back on stack.
-             * This has the effect of creating rectangles of rectangles. */
-            int oldSize = lhs.size();
-            lhs.resize(lhs.size() + rhs.size());
-            std::move(rhs.begin(), rhs.end(), lhs.begin() + oldSize);
-            stack.push(std::move(lhs));
-        }
-        else {
-            stack.push(std::vector<int>(1, c-'0'));
+protected:
+    void init_population(population& pop) override
+    {
+        if(gates == nullptr)
+            error("Floorplan algorithm called with no gates");
+        for(floorplan_citizen& citizen : pop) {
+            citizen.setGates(this->gates);
         }
     }
 
-    /* Validation pass. Each connection to each other connection needs to be validated.
-     * See function above. If not valid, we remove it. */
-    for(unsigned i = 0; i != adjGraph.size(); ++i) {
-    for(unsigned j = 0; j != adjGraph.size(); ++j) {
-        if(!validateAddition(i,j,adjGraph)) {
-            adjGraph[i][j] = '-';
-        }
-    }
+    void calc_fitness(population& pop) override
+    {
+        for(floorplan_citizen& citizen : pop)
+            citizen.calc_fitness();
     }
 
-    return std::move(adjGraph);
+    void mate(floorplan_citizen& child,
+        const floorplan_citizen& mom,
+        const floorplan_citizen& dad) override
+    {
+        child = (rand() % 1) ? mom : dad;
+    }
+
+    void mutate(floorplan_citizen& member) override
+    {
+        member.mutate();
+    }
+
+private:
+    //The gates the form a floorplan over.
+    module* gates = nullptr;
+};
+
+
+/******************************************************/
+
+std::string floorplan(module& partition)
+{
+    FloorplanGenetic algo;
+    algo.setGates(&partition);
+    return algo.go().getPolish();
 }
 
-#if 1
+
+#if 0
 //Floorplan test main
 int main()
 {

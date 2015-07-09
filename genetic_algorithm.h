@@ -1,15 +1,33 @@
 // Source: http://www.generation5.org/content/2003/gahelloworld.asp
 
+/* A genetic algorithm abstract base class.
+ *
+ * This defines a gentic algorithm framework over a class of
+ * an arbitrary Citizen type.
+ * Derived classes must provide a init_population function,
+ * a calc_fitness function, a mate function, and
+ * a mutation function. */
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <math.h>
 
+//Default genetic algorithm tuning parameters
+#define GA_POPSIZE_DEF      2048    //Population size
+#define GA_MAXITER_DEF      16438   //Number of generations
+#define GA_ELITERATE_DEF    0.10    //Percentage of best citizens that survive to next generation
+#define GA_MUTATERATE_DEF   0.10    //Percentage of citizen mutated to next generation
+
 template<typename Citizen>
-class GeneticAlgoritm
+class GeneticAlgorithm
 {
 public:
-    GeneticAlgoritm(int popSize, int maxIter, float eliteRate, float mutateRate);
+    //Default constructor gives the parameters for the algorithm
+    GeneticAlgorithm(int   popSize    = GA_POPSIZE_DEF,
+                    int   maxIter    = GA_MAXITER_DEF,
+                    float eliteRate  = GA_ELITERATE_DEF,
+                    float mutateRate = GA_MUTATERATE_DEF);
 
     Citizen go();   //Runs the algorithm until a Citizen has 0 fitness
 
@@ -34,15 +52,17 @@ private:
 private:
     int GA_POPSIZE;          // population size
     int GA_MAXITER;          // maximum iterations (generations)
-    int GA_MUTATE_THRESH;    // rand() threshold for mutation
+    int GA_MUTATE_THRESH;    // rand() upper threshold for mutation
     int GA_ESIZE;            // number of citizens to move to next generation
 
     population pop_alpha;    //The current generation
     population pop_beta;     //The next generation
 };
 
+/*************************************************************/
+
 template<typename Citizen>
-GeneticAlgoritm<Citizen>::GeneticAlgoritm(int popSize, int maxIter, float eliteRate, float mutateRate)
+GeneticAlgorithm<Citizen>::GeneticAlgorithm(int popSize, int maxIter, float eliteRate, float mutateRate)
     : GA_POPSIZE(popSize)
     , GA_MAXITER(maxIter)
     , GA_MUTATE_THRESH(RAND_MAX * mutateRate)
@@ -50,7 +70,7 @@ GeneticAlgoritm<Citizen>::GeneticAlgoritm(int popSize, int maxIter, float eliteR
     { }
 
 template<typename Citizen>
-void GeneticAlgoritm<Citizen>::mate_populations()
+void GeneticAlgorithm<Citizen>::mate_populations()
 {
     //Elitism: The strongest survive to next generation (pop_alpha -> pop_beta)
     std::copy(pop_beta.begin(), pop_beta.begin() + GA_ESIZE, pop_alpha.begin());
@@ -67,19 +87,20 @@ void GeneticAlgoritm<Citizen>::mate_populations()
 }
 
 template<typename Citizen>
-void GeneticAlgoritm<Citizen>::swap_populations()
+void GeneticAlgorithm<Citizen>::swap_populations()
 {
     std::swap(pop_alpha, pop_beta);
 }
 
 template<typename Citizen>
-void GeneticAlgoritm<Citizen>::sort_by_fitness()
+void GeneticAlgorithm<Citizen>::sort_by_fitness()
 {
-    std::sort(pop_alpha.begin(), pop_alpha.end(), [](Citizen& a, Citizen& b) { return a.fitness < b.fitness; });
+    std::sort(pop_alpha.begin(), pop_alpha.end(),
+              [](Citizen& a, Citizen& b) { return a.fitness < b.fitness; });
 }
 
 template<typename Citizen>
-Citizen GeneticAlgoritm<Citizen>::go()
+Citizen GeneticAlgorithm<Citizen>::go()
 {
     init_population(pop_alpha);
     pop_beta.resize(pop_alpha.size());
