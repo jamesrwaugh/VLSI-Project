@@ -1,6 +1,5 @@
 #ifndef FLOORPLAN_CITIZEN_H
 #define FLOORPLAN_CITIZEN_H
-
 #include <string>
 #include <vector>
 #include "module.h"
@@ -16,17 +15,20 @@ public:
 
 public:
     //Sets the gates to floorplan
-    void setGates(module* gates);
+    void initialize(module* gates);
 
     //Returns the polish string of the citizen
-    std::string getPolish();
+    std::vector<std::string> getPolish();
+
+    //Return text for graph in DOT format
+    std::string getDotGraphText();
 
     /* The fitness of a floorplan is measured in total wire length.
      * This is calculated as sum(i,j) cij * dij, where cij is the number
      * of connections between gate i and j, and dij is the (approximate) distance. */
     void calc_fitness();
 
-    /* Mutating a floorplan solution involves one of the three operatons
+    /* Mutating a floorplan solution involves one of the three operations
      *   on its polish representation:
      * 1) Swap two adjacent operands
      * 2) Complement an operator chain of non-zero length
@@ -35,7 +37,7 @@ public:
 
 private:
     //Polish representation of the plan
-    std::string polish;
+    std::vector<std::string> polish;
 
     //Pointer to shared floorplan set of gates
     module* gates = nullptr;
@@ -43,7 +45,10 @@ private:
 private:
     //Mutation functions and types
     //Components: Roger polish string manipulations
-    //TODO: Add functions
+    std::pair<int,int> swapOperands();
+    std::pair<int,int> complementChain();
+    std::pair<int,int> swapOperandOperator();
+	std::vector<int> opCounts;
 
     //Fitness evaluation functions and types
     //Components: Dijkstra's on the adjgraph, and summation
@@ -51,9 +56,10 @@ private:
 
     //Adjacency graph types and functions
     typedef std::vector<std::vector<char>> floorplan_adjgraph;
-    bool validateAddition(int i, int j);
+    bool validateAddition(int src, int dst);
     void generateAdjacencyGraph();
     floorplan_adjgraph adjgraph;
 };
 
 #endif // FLOORPLAN_CITIZEN_H
+

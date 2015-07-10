@@ -73,14 +73,14 @@ template<typename Citizen>
 void GeneticAlgorithm<Citizen>::mate_populations()
 {
     //Elitism: The strongest survive to next generation (pop_alpha -> pop_beta)
-    std::copy(pop_beta.begin(), pop_beta.begin() + GA_ESIZE, pop_alpha.begin());
+    std::move(pop_alpha.begin(), pop_alpha.begin() + (GA_POPSIZE/2), pop_beta.begin());
 
     // Mate the rest (pop_alpha X pop_alpha -> pop_beta)
     for (int i=GA_ESIZE; i<GA_POPSIZE; ++i)
     {
         int i1 = rand() % (GA_POPSIZE / 2);
         int i2 = rand() % (GA_POPSIZE / 2);
-        mate(pop_beta[i], pop_alpha[i1], pop_alpha[i2]);
+        mate(pop_beta[i], pop_beta[i1], pop_beta[i2]);
         if(rand() < GA_MUTATE_THRESH)
             mutate(pop_beta[i]);
     }
@@ -96,7 +96,7 @@ template<typename Citizen>
 void GeneticAlgorithm<Citizen>::sort_by_fitness()
 {
     std::sort(pop_alpha.begin(), pop_alpha.end(),
-              [](Citizen& a, Citizen& b) { return a.fitness < b.fitness; });
+              [](const Citizen& a, const Citizen& b) { return a.fitness < b.fitness; });
 }
 
 template<typename Citizen>
@@ -114,8 +114,8 @@ Citizen GeneticAlgorithm<Citizen>::go()
         if(pop_alpha.front().fitness <= 1)
             break;
 
-        mate_populations();   // mate the population together
-        swap_populations();   // swap buffers
+        mate_populations();   // create the next generation (beta)
+        swap_populations();   // make beta the current generation (alpha)
     }
 
     return pop_alpha.front();

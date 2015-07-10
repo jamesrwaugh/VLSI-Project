@@ -24,7 +24,7 @@ protected:
         if(gates == nullptr)
             error("Floorplan algorithm called with no gates");
         for(floorplan_citizen& citizen : pop) {
-            citizen.setGates(this->gates);
+            citizen.initialize(this->gates);
         }
     }
 
@@ -54,7 +54,7 @@ private:
 
 /******************************************************/
 
-std::string floorplan(module& partition)
+std::vector<std::string> floorplan(module& partition)
 {
     FloorplanGenetic algo;
     algo.setGates(&partition);

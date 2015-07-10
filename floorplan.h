@@ -7,6 +7,6 @@
  * Output: A polish expression representing an efficient slicing
  *  floorplan placement */
 
-std::string floorplan(const module& partition);
+std::vector<std::string> floorplan(const module& partition);
 
 #endif
