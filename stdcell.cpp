@@ -2,6 +2,7 @@
 #include <sstream>
 #include <fstream>
 #include <exception>
+#include <ciso646>
 #include "utility.h"
 #include "stdcell.h"
 

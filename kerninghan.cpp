@@ -4,6 +4,7 @@
 #include <set>
 #include <thread>
 #include <future>
+#include <ciso646>
 #include "utility.h"
 #include "kerninghan.h"
 
@@ -86,7 +87,7 @@ private:
             const partition& mine = (a.find(g) != a.end()) ? a : b;
             const vint& row = matrix[g];
             for(gate connection = 0; connection != row.size(); ++connection) {
-                if((not row[connection]) or (g == connection))
+                if((!row[connection]) || (g == connection))
                     continue;
                 if(mine.find(connection) != mine.end()) {
                     internal[g] += 1;
@@ -166,12 +167,12 @@ private:
     {
         recalculateWireCosts(matrix);
         for(gate x : ap) {
-            if(not(matrix[x][rm_a] or matrix[x][rm_b]))
+            if(!(matrix[x][rm_a] or matrix[x][rm_b]))
                 continue;
             d_values[x] = getDValue(x) + 2*matrix[x][rm_a] - 2*matrix[x][rm_b];
         }
         for(gate y : bp) {
-            if(not(matrix[y][rm_a] or matrix[y][rm_b]))
+            if(!(matrix[y][rm_a] or matrix[y][rm_b]))
                 continue;        
             d_values[y] = getDValue(y) + 2*matrix[y][rm_b] - 2*matrix[y][rm_a];    
         }
@@ -387,17 +388,19 @@ std::pair<module, module> kernighanLin(const module& m)
 std::pair<int,int> getModuleDimentions(const module& m, const PadframeFile& pad)
 {
     int w=0, h=0, max_h=0;
-    int slideWidth = pad.usableWidth() / pad.slicesHoriz();
+    int slicewidth = (pad.usableWidth() / pad.slicesHoriz()) * 0.75;
 
     //Initial: width is sum of all widths, height is highest gate's height
     for(const stdcell& g : m.gates)
-        w += g.width;
+        w += g.length;
     max_h = std::max_element(m.gates.begin(), m.gates.end(),
-            [](const stdcell& a, const stdcell& b) { return a.length < b.length; })->length;
+            [](const stdcell& a, const stdcell& b) { return a.width < b.width; })->width;
 
     /* h is the highest gate's height times the number of times w goes over
      * the slice wdith, or is only max_h if it does not go over */
-    h = max_h * (w / std::min(w,slideWidth));
+    h = max_h * std::max(1, w/slicewidth);
+    w -= slicewidth * (h / max_h);
+
 
     return std::make_pair(w,h);
 }

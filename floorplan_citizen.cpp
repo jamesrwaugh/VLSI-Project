@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <string>
+#include <queue>
 #include "utility.h"
 #include "floorplan_citizen.h"
 
@@ -23,7 +24,7 @@ void floorplan_citizen::initialize(module* gates)
 		polish.push_back("V");
         for(int i = 2; i < size; ++i) {
 			polish.push_back(to_string(i));
-			polish.push_back("V");
+            polish.push_back(rand()%2 ? "V" : "H");
         }
     } else if(size == 1){
         polish.push_back("0");   //Only one gate
@@ -43,6 +44,9 @@ void floorplan_citizen::initialize(module* gates)
 
 	//Create initial adjacency graph
     generateAdjacencyGraph();
+
+    //Initial high fitness
+    fitness = 99;
 }
 
 std::vector<std::string> floorplan_citizen::getPolish()
@@ -61,10 +65,57 @@ void floorplan_citizen::calc_fitness()
     if(!adjgraphValid) {
        fitness = 0xDEADBEEF;
     } else {
-        fitness = 2 + rand() % 50;
+        /* Otherwise, we calculate the distances from each vertex to each
+         * other vertex, and sum the distances */
+        fitness = 0;
+        for(unsigned vertex = 0; vertex != adjgraph.size(); ++vertex) {
+            auto distances = shortestPaths(vertex);
+            for(unsigned connection = 0; connection != adjgraph.size(); ++connection) {
+                fitness += distances[connection] * gates->connections[vertex][connection];
+            }
+        }
     }
 }
 
+int floorplan_citizen::gateDistance(int g0, int g1, char c)
+{
+    const auto& gt = gates->gates;
+    return c == 'H' ?
+        (gt[g0].length + gt[g1].length)/2 :
+        (gt[g0].width  + gt[g1].width)/2;
+    return 0;
+}
+
+std::vector<int> floorplan_citizen::shortestPaths(int start)
+{
+    int n = adjgraph.size();					// number of vertices
+    std::vector<int> distLabel(n, 0);
+    distLabel[start] = 0;
+    int distance = 0, vertex;							// distance from start vertex
+    std::queue<int> vertexQueue;						// queue of vertices
+    vertexQueue.push(start);
+
+    //TODO: Distances using gate lengths/widths
+    //ex: gates->gates[0].length;
+
+    while (!vertexQueue.empty()) {
+        vertex = vertexQueue.front();
+        vertexQueue.pop();
+        if(distLabel[vertex] > distance)
+            distance++;
+        for(auto it = adjgraph[vertex].begin(); it != adjgraph[vertex].end(); it++) {
+            if(*it == '-')  //Skip empty connections
+                continue;
+            int thisVertex = it - adjgraph[vertex].begin();
+            if (distLabel[thisVertex] <= 0) {
+                distLabel[thisVertex] = distance + 1;
+                vertexQueue.push(thisVertex);
+            }
+        }
+    }
+
+    return distLabel;
+}
 //TODO: Add code here
 
 /********************************************************/
@@ -74,7 +125,7 @@ void floorplan_citizen::calc_fitness()
 void floorplan_citizen::mutate()
 {
     int selection = rand() % 3;
-    //selection = 1; //debug
+    //selection = 2; //debug
 	
     switch(selection)
     {
@@ -213,9 +264,9 @@ std::pair<int,int> floorplan_citizen::swapOperandOperator()
 bool floorplan_citizen::validateAddition(int src, int dst)
 {
     for(unsigned connection = 0; connection != adjgraph.size(); ++connection) {
-        if(adjgraph[dst][connection] == '-')
+        if(adjgraph[src][connection] == '-')
             continue;
-        if(adjgraph[dst][connection] == adjgraph[connection][src])
+        if(adjgraph[src][connection] == adjgraph[connection][dst])
             return false;
     }
     return true;
@@ -275,7 +326,7 @@ void floorplan_citizen::generateAdjacencyGraph()
     if(stack.size() > 1)
         adjgraphValid = false;
 
-#if 0
+#if 1
     for(unsigned i = 0; i != adjgraph.size(); ++i)
     for(unsigned j = 0; j != adjgraph.size(); ++j)
     {

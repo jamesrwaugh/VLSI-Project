@@ -12,7 +12,7 @@ class FloorplanGenetic : public GeneticAlgorithm<floorplan_citizen>
 public:
     //Constructor; set lower sizes for population size and such
     FloorplanGenetic() :
-        GeneticAlgorithm<floorplan_citizen>::GeneticAlgorithm(256, 2048, 0.10, 0.10)
+        GeneticAlgorithm<floorplan_citizen>::GeneticAlgorithm(64, 512, 0.10, 0.10)
         { }
 
     //Sets the module for the floorplan

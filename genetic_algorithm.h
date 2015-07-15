@@ -102,8 +102,9 @@ void GeneticAlgorithm<Citizen>::sort_by_fitness()
 template<typename Citizen>
 Citizen GeneticAlgorithm<Citizen>::go()
 {
+    pop_alpha.resize(GA_POPSIZE);
+    pop_beta.resize(GA_POPSIZE);
     init_population(pop_alpha);
-    pop_beta.resize(pop_alpha.size());
 
     for (int i=0; i<GA_MAXITER; ++i)
     {
@@ -113,6 +114,9 @@ Citizen GeneticAlgorithm<Citizen>::go()
         //See if the best citizen has reached the target
         if(pop_alpha.front().fitness <= 1)
             break;
+
+        auto& best = pop_alpha.front();
+        std::cout << "Best: " << i << " " << best.fitness << " " << best.getPolish() << std::endl;
 
         mate_populations();   // create the next generation (beta)
         swap_populations();   // make beta the current generation (alpha)

@@ -46,7 +46,7 @@ typename std::enable_if<!std::is_same<T,std::string>::value, std::ostream&>::typ
 operator<<(std::ostream& os, const T& cntr)
 {
     os << '[';
-    if(not(cntr.empty())) {
+    if(!(cntr.empty())) {
         auto end = std::prev(cntr.end());
         for(auto it = cntr.begin(); it != end; ++it)
             os << *it << ",";

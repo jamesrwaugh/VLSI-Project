@@ -53,6 +53,8 @@ private:
     //Fitness evaluation functions and types
     //Components: Dijkstra's on the adjgraph, and summation
     //TODO: Add functions
+    std::vector<int> shortestPaths(int start);
+    int gateDistance(int,int,char);
 
     //Adjacency graph types and functions
     typedef std::vector<std::vector<char>> floorplan_adjgraph;
