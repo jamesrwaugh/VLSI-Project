@@ -56,7 +56,13 @@ std::vector<std::string> floorplan_citizen::getPolish()
 
 void floorplan_citizen::calc_fitness()
 {
-	
+    /* If the adjacendy graph is not valid, the fitness is infinite. These will
+     * not continue to the next generation */
+    if(!adjgraphValid) {
+       fitness = 0xDEADBEEF;
+    } else {
+        fitness = 2 + rand() % 50;
+    }
 }
 
 //TODO: Add code here
@@ -121,7 +127,7 @@ std::pair<int,int> floorplan_citizen::complementChain()
     std::vector<std::string>& str = polish;
     std::vector<int> chainIndex;
     
-    for(int i=1; i<str.size(); ++i)
+    for(unsigned i=1; i<str.size(); ++i)
     {
         if( (str[i] == "H" || str[i] == "V") && (str[i-1] != "H" && str[i-1] != "V"))
         {
@@ -133,7 +139,7 @@ std::pair<int,int> floorplan_citizen::complementChain()
     
     //std::cout<<complementIndex<<"\n"; std::vector<std::string> stuff; //debug
     
-    for(int i=complementIndex; (i<str.size() && (str[i] == "H" || str[i] == "V")); ++i)
+    for(unsigned i=complementIndex; (i<str.size() && (str[i] == "H" || str[i] == "V")); ++i)
     {
         if(str[i] == "H")
         {
@@ -154,32 +160,46 @@ std::pair<int,int> floorplan_citizen::complementChain()
 
 std::pair<int,int> floorplan_citizen::swapOperandOperator()
 {
-    std::vector<std::string>& str = polish;
-    int index = -1;
-    
-    for(int i=1; i<str.size()-2; ++i)
+    //std::vector<int> opCount = updateOpCount(str); //delete when done
+
+    int i = -1;
+
+    //random left or right
+    int leftRight = rand() % 2;
+
+    //if left then go to opposite side
+    if(leftRight == 0) { leftRight = -1; }
+
+    bool done = false;
+    while(!done)
     {
-        //std::cout<<"opcount = "<<(2*opCount[i+1])<<"\n";
-        
+        //1+ and -2 don't use the first/last string characters
+        i = 1 + rand() % (polish.size() - 2);
+
         if(
-           ((str[i-1] != str[i+1]) || (2*opCounts[i+1] < i) )
-           && (str[i] != "H" && str[i] != "V")
-           && (str[i+1] == "H" || str[i+1] == "V")
+           ((polish[i-leftRight] != polish[i+leftRight])
+            || (2*opCounts[i] < i) )
+           && (polish[i] != "H" && polish[i] != "V")
+           && (polish[i+leftRight] == "H" || polish[i+leftRight] == "V")
            )
         {
-            //std::cout<<str[i-1]<<".."<<str[i]<<"..."<<str[i+1]<<"\n";
-            index = i;
+            done = true;
         }
     }
-    
-	//Swap the operand and operator
-	std::swap(str[index], str[index+1]);
-    
-    std::pair<int, int> changedNumbers = std::make_pair(index,index+1);
-    
-    //std::cout<<">>"<<changedNumbers.first<<" "<<changedNumbers.second<<std::endl;
-    
-    return changedNumbers;
+
+    //Swap the operand and operator if we found a valid swap,
+    //then update the operator counts
+    std::swap(polish[i], polish[i+leftRight]);
+
+    if(leftRight == 1) {
+        opCounts[i] -= 1;
+    } else {
+        if(i+leftRight>0) {
+            opCounts[i+leftRight] -= 1;
+        }
+    }
+
+    return std::make_pair(i, i+leftRight);
 }
 
 /******************************************************/
@@ -208,7 +228,6 @@ void floorplan_citizen::generateAdjacencyGraph()
 {
     std::stack<std::vector<int>>  stack;
 
-    //TODO: Polish representation with more than 9 modules
     int nGates = gates->gates.size();
     adjgraph.clear();
     adjgraph.resize(nGates);
@@ -222,6 +241,13 @@ void floorplan_citizen::generateAdjacencyGraph()
              * in lhs to rhs. This usually isn't correct, so it
              * needs to be validated. The validation before all
              * connections are made is erroneous, but it is N^2 vs N^3.*/
+
+            /* Here we check to make sure there are two items on the stack */
+            if(stack.size() <= 1) {
+                adjgraphValid = false;
+                break;
+            }
+
             std::vector<int> lhs = std::move(stack.top()); stack.pop();
             std::vector<int> rhs = std::move(stack.top()); stack.pop();
             for(int g : lhs) {
@@ -243,6 +269,11 @@ void floorplan_citizen::generateAdjacencyGraph()
             stack.push(std::vector<int>(1,std::atoi(c.c_str())));
         }
     }
+
+
+    /* 2nd case of being invalid: Stack contains something besides result */
+    if(stack.size() > 1)
+        adjgraphValid = false;
 
 #if 0
     for(unsigned i = 0; i != adjgraph.size(); ++i)
@@ -277,4 +308,3 @@ std::string floorplan_citizen::getDotGraphText()
     ss << "}" << std::endl;
     return ss.str();
 }
-

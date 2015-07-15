@@ -8,8 +8,8 @@
 struct stdcell
 {
     std::string name;
-    float width;
-    float length;
+    float width = 0;
+    float length = 0;
     std::vector<std::string> inputs;
     std::vector<std::string> outputs;
 };

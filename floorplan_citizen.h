@@ -11,7 +11,7 @@ class floorplan_citizen
 {
 public:
     //Citizen's fitness value
-    int fitness = 0;
+    long fitness = 0;
 
 public:
     //Sets the gates to floorplan
@@ -59,6 +59,7 @@ private:
     bool validateAddition(int src, int dst);
     void generateAdjacencyGraph();
     floorplan_adjgraph adjgraph;
+    bool adjgraphValid = true;
 };
 
 #endif // FLOORPLAN_CITIZEN_H

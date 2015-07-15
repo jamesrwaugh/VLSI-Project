@@ -10,7 +10,10 @@
 class FloorplanGenetic : public GeneticAlgorithm<floorplan_citizen>
 {
 public:
-    using GeneticAlgorithm::GeneticAlgorithm;
+    //Constructor; set lower sizes for population size and such
+    FloorplanGenetic() :
+        GeneticAlgorithm<floorplan_citizen>::GeneticAlgorithm(256, 2048, 0.10, 0.10)
+        { }
 
     //Sets the module for the floorplan
     void setGates(module* gates)

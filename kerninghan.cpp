@@ -2,6 +2,8 @@
 #include <tuple>
 #include <iostream>
 #include <set>
+#include <thread>
+#include <future>
 #include "utility.h"
 #include "kerninghan.h"
 
@@ -227,7 +229,7 @@ private:
 
 /************************************************************************/
 
-std::pair<std::vector<int>,std::vector<int>> kernighanLin(const std::vector<std::vector<int>>& matrix)
+std::pair<std::vector<int>,std::vector<int>> kernighanLinSolve(const std::vector<std::vector<int>>& matrix)
 {
     return KernighanLinSolver(matrix);
 }
@@ -357,6 +359,7 @@ void insertIOGates(vint& partition)
     partition.insert(partition.begin(), 0);    //Inptus gate
 }
 
+/** Toplevel Kernighan Lin function **/
 std::pair<module, module> kernighanLin(const module& m)
 {
     module r0, r1;
@@ -364,7 +367,7 @@ std::pair<module, module> kernighanLin(const module& m)
 
     //I/O gates are hidden from the KL algorithm...
     removeIOGates(m_kl);
-    auto partitions = kernighanLin(m_kl.connections);
+    auto partitions = kernighanLinSolve(m_kl.connections);
 
     //...Then we are inseting them back
     insertIOGates(partitions.first);
@@ -377,4 +380,58 @@ std::pair<module, module> kernighanLin(const module& m)
     fixInterPartitionWires(r1, r0, m);
 
     return std::make_pair(std::move(r0), std::move(r1));
+}
+
+/****************************************************************/
+
+std::pair<int,int> getModuleDimentions(const module& m, const PadframeFile& pad)
+{
+    int w=0, h=0, max_h=0;
+    int slideWidth = pad.usableWidth() / pad.slicesHoriz();
+
+    //Initial: width is sum of all widths, height is highest gate's height
+    for(const stdcell& g : m.gates)
+        w += g.width;
+    max_h = std::max_element(m.gates.begin(), m.gates.end(),
+            [](const stdcell& a, const stdcell& b) { return a.length < b.length; })->length;
+
+    /* h is the highest gate's height times the number of times w goes over
+     * the slice wdith, or is only max_h if it does not go over */
+    h = max_h * (w / std::min(w,slideWidth));
+
+    return std::make_pair(w,h);
+}
+
+std::vector<module> kerninghanLinPadframeSlice(const module &m, const PadframeFile &f)
+{
+    std::vector<module> result;
+
+    int sliceWidth  = f.usableWidth()  / f.slicesHoriz();
+    int sliceHeight = f.usableHeight() / f.slicesVert();
+    std::pair<int,int> dimensions = getModuleDimentions(m,f);
+
+    /* If the module is bigger than the padframe slice, we recursively
+     * partition it into two. Otherwise, return the entire module (base case) */
+
+    if(dimensions.first > sliceWidth || dimensions.second > sliceHeight)
+    {
+        //Apply KL on this thread
+        auto partitions = kernighanLin(m);
+
+        //Spawn two threads to partition the two partitions
+        auto future0 = std::async(kerninghanLinPadframeSlice, partitions.first,  f);
+        auto future1 = std::async(kerninghanLinPadframeSlice, partitions.second, f);
+
+        //Wait for the threads and combine their results
+        std::vector<module> parts0 = future0.get();
+        std::vector<module> parts1 = future1.get();
+        result.insert(result.end(), parts0.begin(), parts0.end());
+        result.insert(result.end(), parts1.begin(), parts1.end());
+    }
+    else {
+        //Base case: Module size is within slice w/h, we return only that module
+        result.push_back(std::move(m));
+    }
+
+    return result;
 }
