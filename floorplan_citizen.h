@@ -20,7 +20,7 @@ public:
     //Returns the polish string of the citizen
     std::vector<std::string> getPolish();
 
-    //Return text for graph in DOT format
+    //Return text for adjacency graph in DOT format
     std::string getDotGraphText();
 
     /* The fitness of a floorplan is measured in total wire length.
@@ -52,7 +52,6 @@ private:
 
     //Fitness evaluation functions and types
     //Components: Dijkstra's on the adjgraph, and summation
-    //TODO: Add functions
     std::vector<int> shortestPaths(int start);
     int gateDistance(int,int,char);
 

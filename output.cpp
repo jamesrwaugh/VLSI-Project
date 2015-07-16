@@ -214,14 +214,15 @@ void UnityFile::write(std::vector<module>& modules, std::vector<polish_string>& 
         //Write gate widths/lengths
         for(unsigned j = 2; j < m.gates.size(); ++j) {
             const stdcell& gate = m.gates[j];
-            file << j-2 << " " << gate.width << " " << gate.length << std::endl;
+            file << j-2 << " " << gate.name << " " << gate.width << " " << gate.length << std::endl;
         }
 
         //Write polish string
-        for(const std::string& entry : polishes[i]) {
+        file << "polish ";
+        for(const std::string& entry : polishes[i])
             file << entry << " ";
-        }
-
         file << std::endl;
+
+        ++i;
     }
 }

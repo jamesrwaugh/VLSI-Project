@@ -93,8 +93,7 @@ std::vector<int> floorplan_citizen::shortestPaths(int start)
     std::vector<int> distLabel(n, 999999);      // distance from start vertex
     std::queue<int> vertexQueue;                 // queue of vertices
 
-    //TODO: Distances using gate lengths/widths
-    //ex: gates->gates[0].length;
+    //TODO: Distances using gate lengths/widths (possibly)
 
     distLabel[start] = 0;
     for(int i = 0; i != n; ++i)
@@ -115,7 +114,6 @@ std::vector<int> floorplan_citizen::shortestPaths(int start)
 
     return distLabel;
 }
-//TODO: Add code here
 
 /********************************************************/
 /* Floorplan Citizen String Mutation implementation     */

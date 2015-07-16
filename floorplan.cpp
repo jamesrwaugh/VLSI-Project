@@ -76,12 +76,10 @@ std::vector<polish_string> floorplan_all(std::vector<module>& modules, unsigned 
     std::vector<polish_string> results;
     std::vector<std::future<polish_string>> futures;
 
-    /* Loop for each module and start a thread for it. If we are runnint `batchSize` threads,
+    /* Loop for each module and start a thread for it. If we are running `batchSize` threads,
      * stop and wait for them all. In the case there is a remainder of threads (< batchSize),
      * they are handled by waiting for all remaining threads outside the loop */
-
-    for(module& m: modules)
-    {
+    for(module& m : modules) {
         futures.push_back(std::async(std::launch::async, floorplan_ptr, &m));
         if(futures.size() >= batchSize) {
             for(auto& thread : futures) {
@@ -93,7 +91,6 @@ std::vector<polish_string> floorplan_all(std::vector<module>& modules, unsigned 
 
     /* Catches the remainder threads, in the case of the loop ending and
      * "futures.size() >= batchSize" not triggering */
-
     for(auto& thread : futures) {
         results.push_back(thread.get());
     }
