@@ -1,5 +1,6 @@
 #include <vector>
 #include <stack>
+#include <future>
 #include <string>
 #include "floorplan.h"
 #include "floorplan_citizen.h"
@@ -12,7 +13,7 @@ class FloorplanGenetic : public GeneticAlgorithm<floorplan_citizen>
 public:
     //Constructor; set lower sizes for population size and such
     FloorplanGenetic() :
-        GeneticAlgorithm<floorplan_citizen>::GeneticAlgorithm(64, 512, 0.10, 0.10)
+        GeneticAlgorithm<floorplan_citizen>::GeneticAlgorithm(32, 64, 0.10, 0.60)
         { }
 
     //Sets the module for the floorplan
@@ -57,11 +58,42 @@ private:
 
 /******************************************************/
 
-std::vector<std::string> floorplan(module& partition)
+polish_string floorplan(module& partition)
 {
     FloorplanGenetic algo;
     algo.setGates(&partition);
     return algo.go().getPolish();
+}
+
+polish_string floorplan_ptr(module* partitionPtr)
+{
+    auto result = floorplan(*partitionPtr);
+    return result;
+}
+
+std::vector<polish_string> floorplan_all(std::vector<module>& modules, int batchSize)
+{
+    int nReps = modules.size() / batchSize;
+    int nRem  = modules.size() % batchSize;
+
+    std::vector<polish_string> results;
+    std::vector<std::future<polish_string>> futures;
+
+    //First we run nReps times, creating batchSize threads
+    for(int i = 0; i != nReps; ++i) {
+        for(int j = 0; j != batchSize; ++j)
+            futures.push_back(std::async(std::launch::async, floorplan_ptr, &modules[i*10 + j]));
+        for(int j = 0; j != batchSize; ++j)
+            results.push_back(futures[j].get());
+    }
+
+    //Here we floorplan the remaining module all at once (less than batchsize)
+    for(int i = 0; i != nRem; ++i)
+        futures.push_back(std::async(std::launch::async, floorplan_ptr, &modules[modules.size()-(i+1)]));
+    for(unsigned j = nReps*batchSize+1; j < modules.size(); ++j)
+        results.push_back(futures[j].get());
+
+    return results;
 }
 
 

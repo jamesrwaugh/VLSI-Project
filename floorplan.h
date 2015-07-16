@@ -7,6 +7,15 @@
  * Output: A polish expression representing an efficient slicing
  *  floorplan placement */
 
-std::vector<std::string> floorplan(module& partition);
+typedef std::vector<std::string> polish_string;
+
+//Floorplan a single module
+polish_string floorplan(module& partition);
+
+//Pointer version for threading (calls "floorplan")
+polish_string floorplan_ptr(module* partitionPtr);
+
+//Uses multithreading to floorplan all modules in `modules`
+std::vector<polish_string> floorplan_all(std::vector<module>& modules, int batchSize = 20);
 
 #endif

@@ -89,28 +89,26 @@ int floorplan_citizen::gateDistance(int g0, int g1, char c)
 std::vector<int> floorplan_citizen::shortestPaths(int start)
 {
     int n = adjgraph.size();					// number of vertices
-    std::vector<int> distLabel(n, 0);
-    distLabel[start] = 0;
-    int distance = 0, vertex;							// distance from start vertex
-    std::queue<int> vertexQueue;						// queue of vertices
-    vertexQueue.push(start);
+    std::vector<int> distLabel(n, 999999);      // distance from start vertex
+    std::queue<int> vertexQueue;                 // queue of vertices
 
     //TODO: Distances using gate lengths/widths
     //ex: gates->gates[0].length;
 
+    distLabel[start] = 0;
+    for(int i = 0; i != n; ++i)
+        vertexQueue.push(i);
+
     while (!vertexQueue.empty()) {
-        vertex = vertexQueue.front();
+        int vertex = vertexQueue.front();
         vertexQueue.pop();
-        if(distLabel[vertex] > distance)
-            distance++;
         for(auto it = adjgraph[vertex].begin(); it != adjgraph[vertex].end(); it++) {
             if(*it == '-')  //Skip empty connections
                 continue;
-            int thisVertex = it - adjgraph[vertex].begin();
-            if (distLabel[thisVertex] <= 0) {
-                distLabel[thisVertex] = distance + 1;
-                vertexQueue.push(thisVertex);
-            }
+            int neighbor = it - adjgraph[vertex].begin();
+            int newDist = distLabel[vertex] + gateDistance(vertex, neighbor, *it);
+            if(newDist < distLabel[neighbor])
+                distLabel[neighbor] = newDist;
         }
     }
 
@@ -305,6 +303,7 @@ void floorplan_citizen::generateAdjacencyGraph()
             for(int h : rhs) {
                 if(validateAddition(g,h)) {
                     ((c == "H") ?  adjgraph[g][h] : adjgraph[h][g]) = c[0];
+                    ((c == "H") ?  adjgraph[h][g] : adjgraph[g][h]) = c[0];
                 }
             }
             }
@@ -330,8 +329,10 @@ void floorplan_citizen::generateAdjacencyGraph()
     for(unsigned i = 0; i != adjgraph.size(); ++i)
     for(unsigned j = 0; j != adjgraph.size(); ++j)
     {
-        if(!validateAddition(i,j))
+        if(!validateAddition(i,j)) {
             adjgraph[i][j] = '-';
+            adjgraph[j][i] = '-';
+        }
     }
 #endif
 }

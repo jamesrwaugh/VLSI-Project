@@ -36,11 +36,11 @@ public:
     void mutate();
 
 private:
-    //Polish representation of the plan
-    std::vector<std::string> polish;
-
     //Pointer to shared floorplan set of gates
     module* gates = nullptr;
+
+    //Polish representation of the plan
+    std::vector<std::string> polish;
 
 private:
     //Mutation functions and types

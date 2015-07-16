@@ -405,7 +405,7 @@ std::pair<int,int> getModuleDimentions(const module& m, const PadframeFile& pad)
     return std::make_pair(w,h);
 }
 
-std::vector<module> kerninghanLinPadframeSlice(const module &m, const PadframeFile &f)
+std::vector<module> kerninghanLinPadframeHelper(const module& m, const PadframeFile& f, int depth)
 {
     std::vector<module> result;
 
@@ -422,8 +422,9 @@ std::vector<module> kerninghanLinPadframeSlice(const module &m, const PadframeFi
         auto partitions = kernighanLin(m);
 
         //Spawn two threads to partition the two partitions
-        auto future0 = std::async(kerninghanLinPadframeSlice, partitions.first,  f);
-        auto future1 = std::async(kerninghanLinPadframeSlice, partitions.second, f);
+        auto howToStart = depth < 4 ? std::launch::async : std::launch::deferred;
+        auto future0 = std::async(howToStart, kerninghanLinPadframeHelper, partitions.first,  f, depth+1);
+        auto future1 = std::async(howToStart, kerninghanLinPadframeHelper, partitions.second, f, depth+1);
 
         //Wait for the threads and combine their results
         std::vector<module> parts0 = future0.get();
@@ -437,4 +438,9 @@ std::vector<module> kerninghanLinPadframeSlice(const module &m, const PadframeFi
     }
 
     return result;
+}
+
+std::vector<module> kerninghanLinPadframeSlice(const module &m, const PadframeFile &f)
+{
+    return kerninghanLinPadframeHelper(m, f, 0);
 }

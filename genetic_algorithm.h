@@ -115,9 +115,6 @@ Citizen GeneticAlgorithm<Citizen>::go()
         if(pop_alpha.front().fitness <= 1)
             break;
 
-        auto& best = pop_alpha.front();
-        std::cout << "Best: " << i << " " << best.fitness << " " << best.getPolish() << std::endl;
-
         mate_populations();   // create the next generation (beta)
         swap_populations();   // make beta the current generation (alpha)
     }
