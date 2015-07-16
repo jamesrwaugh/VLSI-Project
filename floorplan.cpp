@@ -90,7 +90,7 @@ std::vector<polish_string> floorplan_all(std::vector<module>& modules, int batch
     //Here we floorplan the remaining module all at once (less than batchsize)
     for(int i = 0; i != nRem; ++i)
         futures.push_back(std::async(std::launch::async, floorplan_ptr, &modules[modules.size()-(i+1)]));
-    for(unsigned j = nReps*batchSize+1; j < modules.size(); ++j)
+    for(unsigned j = nReps*batchSize; j < modules.size(); ++j)
         results.push_back(futures[j].get());
 
     return results;
