@@ -117,18 +117,20 @@ private:
         return getDValue(a) + getDValue(b) - 2*matrix[a][b];
     }
     
-    swappair getBestSwapPair()
+    swappair getBestSwapPair(const vvint& matrix)
     {
         gate max_i = 0, max_j = 0;
         int  max_value = -99;
 
         for(gate i : ap) 
-        for(gate j : bp)
-            if(gains[i][j] > max_value && not(swapped[i]) && not(swapped[j])) {
+        for(gate j : bp) {
+            int gain = getSwapGain(i,j,matrix);
+            if(gain > max_value && not(swapped[i]) && not(swapped[j])) {
                 max_i = i;
                 max_j = j;
-                max_value = gains[i][j];
+                max_value = gain;
             }
+        }
 
         return swappair(max_i, max_j, max_value);
     }
@@ -165,18 +167,27 @@ private:
     
     void recalculateDValues(gate rm_a, gate rm_b, const vvint& matrix)
     {
-        recalculateWireCosts(matrix);
+        //recalculateWireCosts(matrix);
+        partition& rm_a_p = (a.find(rm_a) != a.end()) ? a : b;
+        partition& rm_b_p = (a.find(rm_a) != a.end()) ? a : b;
+
         for(gate x : ap) {
             if(!(matrix[x][rm_a] or matrix[x][rm_b]))
                 continue;
-            d_values[x] = getDValue(x) + 2*matrix[x][rm_a] - 2*matrix[x][rm_b];
+            partition& mine = a.find(x) != a.end() ? a : b;
+            ((&mine == &rm_a_p) ? internal[x] : external[x]) -= matrix[x][rm_a];
+            ((&mine == &rm_b_p) ? internal[x] : external[x]) -= matrix[x][rm_b];
+            d_values[x] = getDValue(x);
         }
-        for(gate y : bp) {
-            if(!(matrix[y][rm_a] or matrix[y][rm_b]))
-                continue;        
-            d_values[y] = getDValue(y) + 2*matrix[y][rm_b] - 2*matrix[y][rm_a];    
+        for(gate x : bp) {
+            if(!(matrix[x][rm_a] or matrix[x][rm_b]))
+                continue;
+            partition& mine = a.find(x) != a.end() ? a : b;
+            ((&mine == &rm_a_p) ? internal[x] : external[x]) -= matrix[x][rm_a];
+            ((&mine == &rm_b_p) ? internal[x] : external[x]) -= matrix[x][rm_b];
+            d_values[x] = getDValue(x);
         }
-        recalculateGains(matrix);
+        //recalculateGains(matrix);
     }
     
     void solve(const vvint& matrix)
@@ -191,7 +202,7 @@ private:
             
             for(unsigned i = 1; i != matrix.size()/2; ++i)
             {
-                auto swapPair = getBestSwapPair();
+                auto swapPair = getBestSwapPair(matrix);
                 gate rm_a = std::get<0>(swapPair);
                 gate rm_b = std::get<1>(swapPair);            
                 ap.erase(rm_a);

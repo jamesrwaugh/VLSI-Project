@@ -71,27 +71,32 @@ polish_string floorplan_ptr(module* partitionPtr)
     return result;
 }
 
-std::vector<polish_string> floorplan_all(std::vector<module>& modules, int batchSize)
+std::vector<polish_string> floorplan_all(std::vector<module>& modules, unsigned batchSize)
 {
-    int nReps = modules.size() / batchSize;
-    int nRem  = modules.size() % batchSize;
-
     std::vector<polish_string> results;
     std::vector<std::future<polish_string>> futures;
 
-    //First we run nReps times, creating batchSize threads
-    for(int i = 0; i != nReps; ++i) {
-        for(int j = 0; j != batchSize; ++j)
-            futures.push_back(std::async(std::launch::async, floorplan_ptr, &modules[i*10 + j]));
-        for(int j = 0; j != batchSize; ++j)
-            results.push_back(futures[j].get());
+    /* Loop for each module and start a thread for it. If we are runnint `batchSize` threads,
+     * stop and wait for them all. In the case there is a remainder of threads (< batchSize),
+     * they are handled by waiting for all remaining threads outside the loop */
+
+    for(module& m: modules)
+    {
+        futures.push_back(std::async(std::launch::async, floorplan_ptr, &m));
+        if(futures.size() >= batchSize) {
+            for(auto& thread : futures) {
+                results.push_back(thread.get());
+            }
+            futures.clear();
+        }
     }
 
-    //Here we floorplan the remaining module all at once (less than batchsize)
-    for(int i = 0; i != nRem; ++i)
-        futures.push_back(std::async(std::launch::async, floorplan_ptr, &modules[modules.size()-(i+1)]));
-    for(unsigned j = nReps*batchSize; j < modules.size(); ++j)
-        results.push_back(futures[j].get());
+    /* Catches the remainder threads, in the case of the loop ending and
+     * "futures.size() >= batchSize" not triggering */
+
+    for(auto& thread : futures) {
+        results.push_back(thread.get());
+    }
 
     return results;
 }

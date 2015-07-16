@@ -16,6 +16,6 @@ polish_string floorplan(module& partition);
 polish_string floorplan_ptr(module* partitionPtr);
 
 //Uses multithreading to floorplan all modules in `modules`
-std::vector<polish_string> floorplan_all(std::vector<module>& modules, int batchSize = 20);
+std::vector<polish_string> floorplan_all(std::vector<module>& modules, unsigned batchSize = 20);
 
 #endif
