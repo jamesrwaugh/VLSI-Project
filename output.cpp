@@ -189,3 +189,39 @@ std::ostream& SubcktFile::operator<<(const std::pair<module,module>& partitions)
     partitionNumber += 2;
     return file;
 }
+
+/****************************************************************************/
+/****************************************************************************/
+
+UnityFile::UnityFile(const std::string &filename)
+{
+    file.open(filename, std::ios::out);
+    if(!file.is_open()) {
+        error("Could not open UnityFile \"", filename, "\" for writing");
+    }
+}
+
+void UnityFile::write(std::vector<module>& modules, std::vector<polish_string>& polishes)
+{
+    if(modules.size() != polishes.size())
+        error("UnityFile modules and polish sizes differ");
+
+    int i = 0;
+    for(const module& m : modules)
+    {
+        file << "slice" << i << std::endl;
+
+        //Write gate widths/lengths
+        for(unsigned j = 2; j < m.gates.size(); ++j) {
+            const stdcell& gate = m.gates[j];
+            file << j-2 << " " << gate.width << " " << gate.length << std::endl;
+        }
+
+        //Write polish string
+        for(const std::string& entry : polishes[i]) {
+            file << entry << " ";
+        }
+
+        file << std::endl;
+    }
+}

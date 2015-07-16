@@ -13,11 +13,11 @@ std::string to_string(int i) { std::stringstream ss; ss << i; return ss.str(); }
 void floorplan_citizen::initialize(module* gates)
 {
     this->gates = gates;
-	polish.clear();
 
 	//Make an initial polish string of all things vertical.
 	//Ex: 12V3V4V5V...
-	int size = gates->gates.size();
+    int size = gates->gates.size()-2;   //-2 to account for I/O gates...
+    polish.clear();
     if(size > 1) {
 		polish.push_back("0");
 		polish.push_back("1");
@@ -79,10 +79,11 @@ void floorplan_citizen::calc_fitness()
 
 int floorplan_citizen::gateDistance(int g0, int g1, char c)
 {
+    //+2 accounts for 0 and 1 being "hidden" I/O gates. Ex gate 0 is actually gate 2
     const auto& gt = gates->gates;
     return c == 'H' ?
-        (gt[g0].length + gt[g1].length)/2 :
-        (gt[g0].width  + gt[g1].width)/2;
+        (gt[g0+2].length + gt[g1+2].length)/2 :
+        (gt[g0+2].width  + gt[g1+2].width)/2;
     return 0;
 }
 
