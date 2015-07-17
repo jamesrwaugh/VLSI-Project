@@ -1,0 +1,12 @@
+.model bookmodel
+.inputs a b c d e f g h
+.outputs y
+.gate nand2 a=[a] b=[b] O=[N1]
+.gate nand2 a=[c] b=[d] O=[N2]
+.gate nand2 a=[e] b=[f] O=[N3]
+.gate nand2 a=[g] b=[h] O=[N4]
+.gate nor2 a=[N1] b=[N2] O=[O1]
+.gate nor2 a=[N3] b=[N4] O=[O2]
+.gate nand2 a=[O1] b=[O2] O=[N5]
+.gate nand2 a=[N5] b=[N5] O=[y]
+.end
