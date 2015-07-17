@@ -35,6 +35,10 @@ int main(int argc, char** argv)
         std::cout << "Floorplanning..." << std::endl;
         auto polishes = floorplan_all(partitions);
 
+        //Write out unity
+        UnityFile unity("unity.out");
+        unity.write(partitions, polishes);
+
         //Print out results
         for(polish_string& s : polishes)
             std::cout << s << std::endl;
